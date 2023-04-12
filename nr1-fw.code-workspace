@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"terminal.integrated.env.osx": {
+			"PATH": "${env:PATH}:/Users/aidan/.local/bin:/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/Apple/usr/bin:/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/MacOs/bin/"
+		},
+		"terminal.integrated.env.linux": {
+			"PATH": "${env:PATH}:/usr/local/STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin"
+		},
+		"cortex-debug.variableUseNaturalFormat": false,
+		"files.associations": {
+			"errno.h": "c",
+			"cmsis_compiler.h": "c",
+			"stddef.h": "c"
+		},
+		"todo-tree.general.enableFileWatcher": true
+	}
+}
