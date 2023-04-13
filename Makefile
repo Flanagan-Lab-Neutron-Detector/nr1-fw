@@ -139,7 +139,7 @@ AS_INCLUDES =
 C_INCLUDES =  \
 -IUSB_DEVICE/App \
 -IUSB_DEVICE/Target \
--IApp/Inc \
+-IApp/Src \
 -IDrivers/STM32H7xx_HAL_Driver/Inc \
 -IDrivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -IMiddlewares/ST/STM32_USB_Device_Library/Core/Inc \
