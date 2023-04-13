@@ -33,8 +33,6 @@ extern unsigned char _heap_start;
 extern unsigned char _heap_end;
 void *_sbrk(int incr)
 {
-	// TODO: Make sure heap is in SRAM, not DTCM
-
 	static unsigned char *heap = NULL;
 	unsigned char *prev_heap;
 
