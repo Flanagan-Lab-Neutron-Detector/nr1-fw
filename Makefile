@@ -25,54 +25,54 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-app/src/det_driver_qspi.c \
-app/src/det_ctrl.c \
-app/src/syscalls.c \
-app/src/comms_usb_hpt.c \
-app/src/main.c \
-app/src/stm32h7xx_it.c \
-app/src/stm32h7xx_hal_msp.c \
-USB_DEVICE/app/usb_device.c \
-USB_DEVICE/app/usbd_desc.c \
-USB_DEVICE/app/usbd_cdc_if.c \
-USB_DEVICE/Target/usbd_conf.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_crc.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_crc_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ospi.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
-Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
-app/src/system_stm32h7xx.c \
-Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
-Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
-Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
-Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
+src/det_driver_qspi.c \
+src/det_ctrl.c \
+src/syscalls.c \
+src/comms_usb_hpt.c \
+src/main.c \
+src/stm32h7xx_it.c \
+src/stm32h7xx_hal_msp.c \
+src/USB_DEVICE/App/usb_device.c \
+src/USB_DEVICE/App/usbd_desc.c \
+src/USB_DEVICE/App/usbd_cdc_if.c \
+src/USB_DEVICE/Target/usbd_conf.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_crc.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_crc_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_ospi.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
+src/Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
+src/system_stm32h7xx.c \
+src/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
+src/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
+src/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
+src/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
 
 # ASM sources
 ASM_SOURCES =  \
-startup_stm32h7a3xxq.s
+src/startup_stm32h7a3xxq.s
 
 
 #######################################
@@ -137,15 +137,15 @@ AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--IUSB_DEVICE/App \
--IUSB_DEVICE/Target \
--Iapp/src \
--IDrivers/STM32H7xx_HAL_Driver/Inc \
--IDrivers/STM32H7xx_HAL_Driver/Inc/Legacy \
--IMiddlewares/ST/STM32_USB_Device_Library/Core/Inc \
--IMiddlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc \
--IDrivers/CMSIS/Device/ST/STM32H7xx/Include \
--IDrivers/CMSIS/Include
+-Isrc/USB_DEVICE/App \
+-Isrc/USB_DEVICE/Target \
+-Isrc \
+-Isrc/Drivers/STM32H7xx_HAL_Driver/Inc \
+-Isrc/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy \
+-Isrc/Middlewares/ST/STM32_USB_Device_Library/Core/Inc \
+-Isrc/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc \
+-Isrc/Drivers/CMSIS/Device/ST/STM32H7xx/Include \
+-Isrc/Drivers/CMSIS/Include
 
 
 # compile gcc flags
