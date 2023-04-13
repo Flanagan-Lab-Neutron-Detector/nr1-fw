@@ -25,16 +25,16 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
-App/Src/det_driver_qspi.c \
-App/Src/det_ctrl.c \
-App/Src/syscalls.c \
-App/Src/comms_usb_hpt.c \
-App/Src/main.c \
-App/Src/stm32h7xx_it.c \
-App/Src/stm32h7xx_hal_msp.c \
-USB_DEVICE/App/usb_device.c \
-USB_DEVICE/App/usbd_desc.c \
-USB_DEVICE/App/usbd_cdc_if.c \
+app/src/det_driver_qspi.c \
+app/src/det_ctrl.c \
+app/src/syscalls.c \
+app/src/comms_usb_hpt.c \
+app/src/main.c \
+app/src/stm32h7xx_it.c \
+app/src/stm32h7xx_hal_msp.c \
+USB_DEVICE/app/usb_device.c \
+USB_DEVICE/app/usbd_desc.c \
+USB_DEVICE/app/usbd_cdc_if.c \
 USB_DEVICE/Target/usbd_conf.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c \
@@ -64,7 +64,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c \
-App/Src/system_stm32h7xx.c \
+app/src/system_stm32h7xx.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c \
@@ -139,7 +139,7 @@ AS_INCLUDES =
 C_INCLUDES =  \
 -IUSB_DEVICE/App \
 -IUSB_DEVICE/Target \
--IApp/Src \
+-Iapp/src \
 -IDrivers/STM32H7xx_HAL_Driver/Inc \
 -IDrivers/STM32H7xx_HAL_Driver/Inc/Legacy \
 -IMiddlewares/ST/STM32_USB_Device_Library/Core/Inc \
