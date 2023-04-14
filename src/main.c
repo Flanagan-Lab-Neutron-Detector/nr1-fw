@@ -63,25 +63,12 @@ int main(void)
 
 	HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
-	uint32_t timer = 0;
 
 	uint32_t tick_timer = 0;
 
 	/* Infinite loop */
 	while (1)
 	{
-		if (timer == 0) {
-#define TIMER_PERIOD (9000000)
-			timer = TIMER_PERIOD;
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
-		} else if (timer == TIMER_PERIOD/12) {
-			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
-		}
-
-		if (timer > 0)
-			timer--;
-
 		if (tick_timer == 0) {
 			tick_timer = 1000;
 			comms_usb_hpt_tick();
