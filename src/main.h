@@ -16,6 +16,9 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
+/* Exported variables --------------------------------------------------------*/
+extern int gMainLoopSemaphore; // Set by tim13 isr, reset in main loop
+
 /* Private defines -----------------------------------------------------------*/
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC

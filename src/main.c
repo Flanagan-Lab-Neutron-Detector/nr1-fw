@@ -18,6 +18,9 @@ OSPI_HandleTypeDef hospi1;
 SPI_HandleTypeDef  hspi1;
 UART_HandleTypeDef huart3;
 TIM_HandleTypeDef  htim12;
+TIM_HandleTypeDef  htim13;
+
+int gMainLoopSemaphore;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -27,6 +30,7 @@ static void MX_OCTOSPI1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM12_Init(void);
+static void MX_TIM13_Init(void);
 
 extern void HAL_TIM_MspPostInit(TIM_HandleTypeDef *handle);
 
@@ -56,6 +60,7 @@ int main(void)
 	MX_SPI1_Init();
 	MX_USART3_UART_Init();
 	MX_TIM12_Init();
+	MX_TIM13_Init();
 	MX_USB_DEVICE_Init();
 	// The detector driver may take a while to reset
 	HAL_Delay(200);
@@ -64,18 +69,17 @@ int main(void)
 	HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
-
-	uint32_t tick_timer = 0;
+	HAL_TIM_Base_Start(&htim13);
 
 	/* Infinite loop */
 	while (1)
 	{
-		if (tick_timer == 0) {
-			tick_timer = 1000;
+		if (gMainLoopSemaphore) {
+			gMainLoopSemaphore = 0;
 			comms_usb_hpt_tick();
-		} else {
-			tick_timer--;
 		}
+
+		__WFI();
 	}
 }
 
@@ -313,6 +317,26 @@ static void MX_TIM12_Init(void)
 	}
 	HAL_TIM_MspPostInit(&htim12);
 }
+
+/**
+ * @brief TIM13 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM13_Init(void)
+{
+	htim13.Instance = TIM13;
+	htim13.Init.Prescaler = 0;
+	htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim13.Init.Period = 65535;
+	htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
+
 /**
  * @brief GPIO Initialization Function
  * @param None
