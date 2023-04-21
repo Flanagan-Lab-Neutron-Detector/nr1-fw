@@ -25,6 +25,7 @@
 #include "usbd_desc.h"
 #include "usbd_cdc.h"
 #include "usbd_cdc_if.h"
+#include "stm32h7xx_hal_rcc.h" // for __HAL_RCC_USB2_OTG_FS_ULPI_CLK_SLEEP_DISABLE
 
 /* USER CODE BEGIN Includes */
 
@@ -89,6 +90,10 @@ void MX_USB_DEVICE_Init(void)
   HAL_PWREx_EnableUSBVoltageDetector();
 
   HAL_NVIC_SetPriority(OTG_HS_IRQn, 0, 1);
+
+  // must clear RCC_AHB1LPENR.USB2OTGHSULPILPEN for proper operation in sleep mode (wfi)
+  // https://community.st.com/s/question/0D50X0000AixkSoSQI/why-stm32h743-usb-fs-doesnt-work-if-freertos-ticklessidle-enabled
+  __HAL_RCC_USB_OTG_HS_ULPI_CLK_SLEEP_DISABLE();
 
   /* USER CODE END USB_DEVICE_Init_PostTreatment */
 }

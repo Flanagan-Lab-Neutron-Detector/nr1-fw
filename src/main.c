@@ -79,7 +79,7 @@ int main(void)
 			comms_usb_hpt_tick();
 		}
 
-		__WFI();
+		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
 }
 
