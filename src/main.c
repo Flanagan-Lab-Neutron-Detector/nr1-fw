@@ -69,7 +69,7 @@ int main(void)
 	HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
-	HAL_TIM_Base_Start(&htim13);
+	HAL_TIM_Base_Start_IT(&htim13);
 
 	/* Infinite loop */
 	while (1)
@@ -325,13 +325,20 @@ static void MX_TIM12_Init(void)
  */
 static void MX_TIM13_Init(void)
 {
+	TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+
 	htim13.Instance = TIM13;
 	htim13.Init.Prescaler = 0;
 	htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
 	htim13.Init.Period = 65535;
-	htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
 	htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 	if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+	if (HAL_TIM_ConfigClockSource(&htim13, &sClockSourceConfig) != HAL_OK)
 	{
 		Error_Handler();
 	}
