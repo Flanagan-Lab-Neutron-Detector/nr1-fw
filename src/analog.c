@@ -59,31 +59,16 @@ DacError DacWriteOutput(uint32_t unit, uint32_t counts)
     if (dac_err_state == GPIO_PIN_SET)
         return DAC_ERR_HW;
 
-    HAL_StatusTypeDef status = HAL_OK;
-    switch (unit) {
-        case 1:
-            status = dac_send(unit, counts);
-            if (status == HAL_TIMEOUT)
-                ret = DAC_ERR_TIMEOUT;
-            else if (status != HAL_OK)
-                ret = DAC_ERR_SPI;
-            // printf("[DacWriteOutput] RESET counts=%ld\n", counts);
-            break;
-        case 2:
-            status = dac_send(unit, counts);
-            if (status == HAL_TIMEOUT)
-                ret = DAC_ERR_TIMEOUT;
-            else if (status != HAL_OK)
-                ret = DAC_ERR_SPI;
-            // printf("[DacWriteOutput] WP counts=%ld\n", counts);
-            break;
-        default:
-            ret = DAC_ERR_INVALID_CHANNEL;
-            // printf("[DacWriteOUtput] Invalid channel %ld\n", unit);
-            break;
+    if (unit == 1 || unit == 2) {
+        HAL_StatusTypeDef status = dac_send(unit, counts);
+        if (status == HAL_TIMEOUT)
+            ret = DAC_ERR_TIMEOUT;
+        else if (status != HAL_OK)
+            ret = DAC_ERR_SPI;
+    } else {
+        ret = DAC_ERR_INVALID_CHANNEL;
     }
-
-    // printf("[DacWriteOutputs] Write reset=% 4ldmV wp=% 4ldmV\n", gDac.ActiveCountsReset, gDac.ActiveCountsWpAcc);
+    HAL_StatusTypeDef status = HAL_OK;
 
     return ret;
 }
