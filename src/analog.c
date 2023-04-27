@@ -68,7 +68,6 @@ DacError DacWriteOutput(uint32_t unit, uint32_t counts)
     } else {
         ret = DAC_ERR_INVALID_CHANNEL;
     }
-    HAL_StatusTypeDef status = HAL_OK;
 
     return ret;
 }
