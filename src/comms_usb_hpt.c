@@ -8,6 +8,7 @@
 #include "comms_hpt_msgs.h"
 #include "usbd_cdc_if.h"
 #include "det_ctrl.h"
+#include "analog.h"
 #include <stdbool.h>
 
 // debug

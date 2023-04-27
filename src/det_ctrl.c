@@ -10,6 +10,7 @@
 #include "main.h"
 #include "det_driver_sw.h"
 #include "det_driver_qspi.h"
+#include "analog.h"
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -54,49 +55,6 @@ uint8_t CountBitsInPage(uint16_t *page)
 	}
 
 	return bitcount;
-}
-
-extern SPI_HandleTypeDef hspi1; // defined in main.c
-union analog_set_frame { // TODO: move this somewhere that makes sense
-	uint8_t frame[4];
-	struct {
-		uint32_t rw : 1;
-		uint32_t address : 4;
-		uint32_t microvolts : 23;
-		uint32_t reserved : 3;
-		uint32_t checksum : 1;
-	};
-};
-void DacWriteOutput(uint32_t unit, uint32_t counts)
-{
-	union analog_set_frame spi_cmd;
-
-	switch (unit) {
-		case 1:
-			gDac.ActiveCountsReset = counts & 0x007FFFFF;
-			spi_cmd.rw = 1;
-			spi_cmd.address = 0x0;
-			spi_cmd.microvolts = gDac.ActiveCountsReset;
-			spi_cmd.reserved = 0;
-			spi_cmd.checksum = 0;
-			spi_cmd.checksum = __builtin_parity(*(unsigned int*)&spi_cmd);
-			HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
-			//printf("[DacWriteOutput] RESET counts=%ld\n", counts);
-			break;
-		case 2:
-			gDac.ActiveCountsWpAcc = counts & 0x007FFFFF;
-			spi_cmd.rw = 1;
-			spi_cmd.address = 0x1;
-			spi_cmd.microvolts = gDac.ActiveCountsWpAcc;
-			spi_cmd.reserved = 0;
-			spi_cmd.checksum = 0;
-			spi_cmd.checksum = __builtin_parity(*(unsigned int*)&spi_cmd);
-			HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
-			//printf("[DacWriteOutput] WP counts=%ld\n", counts);
-			break;
-	}
-
-	//printf("[DacWriteOutputs] Write reset=% 4ldmV wp=% 4ldmV\n", gDac.ActiveCountsReset, gDac.ActiveCountsWpAcc);
 }
 
 static void detDelay(uint32_t ticks)

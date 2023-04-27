@@ -25,6 +25,7 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
+src/analog.c \
 src/det_driver_qspi.c \
 src/det_ctrl.c \
 src/syscalls.c \
