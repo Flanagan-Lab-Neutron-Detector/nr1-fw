@@ -30,6 +30,7 @@ typedef enum {
     DAC_SUCCESS = 0, // Success
     DAC_ERR_TIMEOUT, // Timeout while writing to DAC
     DAC_ERR_HW,      // DAC hardware error
+    DAC_ERR_SPI,     // SPI error
     DAC_ERR_INVALID_CHANNEL // Invalid DAC channel
 } DacError;
 

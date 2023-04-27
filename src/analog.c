@@ -10,6 +10,7 @@
 
 #include "analog.h"
 #include "stm32h7xx_hal.h"
+#include "main.h"
 
 // globals
 S_DacVariables gDac;
@@ -28,47 +29,58 @@ union analog_set_frame {
     };
 };
 
-DacError DacWriteOutput(uint32_t unit, uint32_t counts)
+static HAL_StatusTypeDef dac_send(uint32_t unit, uint32_t counts)
 {
     union analog_set_frame spi_cmd;
+
+    switch (unit) {
+        case 1:
+            spi_cmd.microvolts = gDac.ActiveCountsReset = counts & 0x007FFFFF;
+            spi_cmd.address = 0x0;
+            break;
+        case 2:
+            spi_cmd.microvolts = gDac.ActiveCountsWpAcc = counts & 0x007FFFFF;
+            spi_cmd.address = 0x1;
+            break;
+    }
+
+    spi_cmd.rw = 1;
+    spi_cmd.checksum = 0;
+    spi_cmd.checksum = __builtin_parity(*(unsigned int *)&spi_cmd);
+    HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
+    return status;
+}
+
+DacError DacWriteOutput(uint32_t unit, uint32_t counts)
+{
     DacError ret = DAC_SUCCESS;
 
-    switch (unit)
-    {
-    case 1:
-        gDac.ActiveCountsReset = counts & 0x007FFFFF;
-        spi_cmd.rw = 1;
-        spi_cmd.address = 0x0;
-        spi_cmd.microvolts = gDac.ActiveCountsReset;
-        spi_cmd.reserved = 0;
-        spi_cmd.checksum = 0;
-        spi_cmd.checksum = __builtin_parity(*(unsigned int *)&spi_cmd);
-        HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
-        if (status == HAL_SPI_ERROR_TIMEOUT)
-            ret = DAC_ERR_TIMEOUT;
-        else if (status != HAL_OK)
-            ret = DAC_ERR_HW;
-        // printf("[DacWriteOutput] RESET counts=%ld\n", counts);
-        break;
-    case 2:
-        gDac.ActiveCountsWpAcc = counts & 0x007FFFFF;
-        spi_cmd.rw = 1;
-        spi_cmd.address = 0x1;
-        spi_cmd.microvolts = gDac.ActiveCountsWpAcc;
-        spi_cmd.reserved = 0;
-        spi_cmd.checksum = 0;
-        spi_cmd.checksum = __builtin_parity(*(unsigned int *)&spi_cmd);
-        HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
-        if (status == HAL_SPI_ERROR_TIMEOUT)
-            ret = DAC_ERR_TIMEOUT;
-        else if (status != HAL_OK)
-            ret = DAC_ERR_HW;
-        // printf("[DacWriteOutput] WP counts=%ld\n", counts);
-        break;
-    default:
-        ret = DAC_ERR_INVALID_CHANNEL;
-        // printf("[DacWriteOUtput] Invalid channel %ld\n", unit);
-        break;
+    GPIO_PinState dac_err_state = HAL_GPIO_ReadPin(ANA_ERR_GPIO_Port, ANA_ERR_Pin);
+    if (dac_err_state == GPIO_PIN_SET)
+        return DAC_ERR_HW;
+
+    HAL_StatusTypeDef status = HAL_OK;
+    switch (unit) {
+        case 1:
+            status = dac_send(unit, counts);
+            if (status == HAL_TIMEOUT)
+                ret = DAC_ERR_TIMEOUT;
+            else if (status != HAL_OK)
+                ret = DAC_ERR_SPI;
+            // printf("[DacWriteOutput] RESET counts=%ld\n", counts);
+            break;
+        case 2:
+            status = dac_send(unit, counts);
+            if (status == HAL_TIMEOUT)
+                ret = DAC_ERR_TIMEOUT;
+            else if (status != HAL_OK)
+                ret = DAC_ERR_SPI;
+            // printf("[DacWriteOutput] WP counts=%ld\n", counts);
+            break;
+        default:
+            ret = DAC_ERR_INVALID_CHANNEL;
+            // printf("[DacWriteOUtput] Invalid channel %ld\n", unit);
+            break;
     }
 
     // printf("[DacWriteOutputs] Write reset=% 4ldmV wp=% 4ldmV\n", gDac.ActiveCountsReset, gDac.ActiveCountsWpAcc);
