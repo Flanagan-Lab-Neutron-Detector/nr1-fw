@@ -26,7 +26,14 @@ typedef struct
 
 extern S_DacVariables gDac;
 
-extern void DacWriteOutput(uint32_t unit, uint32_t counts);
+typedef enum {
+    DAC_SUCCESS = 0, // Success
+    DAC_ERR_TIMEOUT, // Timeout while writing to DAC
+    DAC_ERR_HW,      // DAC hardware error
+    DAC_ERR_INVALID_CHANNEL // Invalid DAC channel
+} DacError;
+
+extern DacError DacWriteOutput(uint32_t unit, uint32_t counts);
 
 // #define			SET_RESET_VOLTAGE(V)		gDac.ActiveCountsReset = (uint16_t)(gRamConfig.Ana_Reset10VCnts * ((float)(V)/10.0))
 // #define			SET_WP_ACC_VOLTAGE(V)		gDac.ActiveCountsWpAcc = (uint16_t)(gRamConfig.Ana_WpAcc10VCnts * ((float)(V)/10.0))

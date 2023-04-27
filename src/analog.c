@@ -27,9 +27,11 @@ union analog_set_frame {
         uint32_t checksum   : 1;
     };
 };
-void DacWriteOutput(uint32_t unit, uint32_t counts)
+
+DacError DacWriteOutput(uint32_t unit, uint32_t counts)
 {
     union analog_set_frame spi_cmd;
+    DacError ret = DAC_SUCCESS;
 
     switch (unit)
     {
@@ -41,7 +43,11 @@ void DacWriteOutput(uint32_t unit, uint32_t counts)
         spi_cmd.reserved = 0;
         spi_cmd.checksum = 0;
         spi_cmd.checksum = __builtin_parity(*(unsigned int *)&spi_cmd);
-        HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
+        HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
+        if (status == HAL_SPI_ERROR_TIMEOUT)
+            ret = DAC_ERR_TIMEOUT;
+        else if (status != HAL_OK)
+            ret = DAC_ERR_HW;
         // printf("[DacWriteOutput] RESET counts=%ld\n", counts);
         break;
     case 2:
@@ -52,13 +58,20 @@ void DacWriteOutput(uint32_t unit, uint32_t counts)
         spi_cmd.reserved = 0;
         spi_cmd.checksum = 0;
         spi_cmd.checksum = __builtin_parity(*(unsigned int *)&spi_cmd);
-        HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
+        HAL_StatusTypeDef status = HAL_SPI_Transmit(&hspi1, spi_cmd.frame, sizeof(spi_cmd), HAL_MAX_DELAY);
+        if (status == HAL_SPI_ERROR_TIMEOUT)
+            ret = DAC_ERR_TIMEOUT;
+        else if (status != HAL_OK)
+            ret = DAC_ERR_HW;
         // printf("[DacWriteOutput] WP counts=%ld\n", counts);
         break;
     default:
+        ret = DAC_ERR_INVALID_CHANNEL;
         // printf("[DacWriteOUtput] Invalid channel %ld\n", unit);
         break;
     }
 
     // printf("[DacWriteOutputs] Write reset=% 4ldmV wp=% 4ldmV\n", gDac.ActiveCountsReset, gDac.ActiveCountsWpAcc);
+
+    return ret;
 }
