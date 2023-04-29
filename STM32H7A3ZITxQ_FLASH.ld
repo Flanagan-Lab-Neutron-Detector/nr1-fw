@@ -57,14 +57,16 @@ _estack = ORIGIN(DTCMRAM) + LENGTH(DTCMRAM);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
+_Data_Flash_Sector_Size = 0x2000; /* 8K */
 
 /* Specify the memory areas */
 MEMORY
 {
-DTCMRAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-RAM (xrw)      : ORIGIN = 0x24000000, LENGTH = 1024K
-ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 2048K
+  DTCMRAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
+  RAM (xrw)          : ORIGIN = 0x24000000, LENGTH = 1024K
+  ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
+  FLASH (rx)         : ORIGIN = 0x08000000, LENGTH = 2032K
+  DATAFLASH (rw)     : ORIGIN = 0x081FC000, LENGTH = 16K
 }
 
 /* Define output sections */
@@ -110,6 +112,16 @@ SECTIONS
     *(.ARM.exidx*)
     __exidx_end = .;
   } >FLASH
+
+  .app_config :
+  {
+    . = ALIGN(4);
+    _app_config_block_0 = .;
+    . = . + _Data_Flash_Sector_Size;
+    _app_config_block_1 = .;
+    . = . + _Data_Flash_Sector_Size;
+    . = ALIGN(4);
+  } >DATAFLASH
 
   .preinit_array     :
   {
