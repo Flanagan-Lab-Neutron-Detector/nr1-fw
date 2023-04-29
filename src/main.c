@@ -10,6 +10,7 @@
 #include "comms_usb_hpt.h"
 #include "comms_hpt_msgs.h"
 #include "det_ctrl.h"
+#include "analog.h"
 
 /* Private variables ---------------------------------------------------------*/
 
@@ -35,6 +36,108 @@ static void MX_TIM13_Init(void);
 extern void HAL_TIM_MspPostInit(TIM_HandleTypeDef *handle);
 
 /* Private user code ---------------------------------------------------------*/
+
+typedef union __packed __aligned(4) {
+	struct {
+		float DAC1_CalC0;
+		float DAC1_CalC1;
+		float DAC2_CalC0;
+		float DAC2_CalC1;
+		uint32_t nwrites;
+	};
+	struct {
+		uint8_t raw_payload[8192-4];
+		uint32_t crc;
+	};
+} FlashConfig;
+
+extern unsigned char _app_config_block_0, _app_config_block_1;
+static FlashConfig *mAppConfigBlock0 = (FlashConfig *)&_app_config_block_0;
+static FlashConfig *mAppConfigBlock1 = (FlashConfig *)&_app_config_block_1;
+FlashConfig gAppRamConfig;
+
+// save ram config to flash
+void FlashConfigSave(void)
+{
+	HAL_StatusTypeDef status = HAL_OK;
+	gAppRamConfig.nwrites++;
+	// calculate CRC in ram
+	gAppRamConfig.crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)gAppRamConfig.raw_payload, sizeof(gAppRamConfig) / 4 - 1);
+	// Write to flash
+	status = HAL_FLASH_Unlock();
+	if (status != HAL_OK) {
+		Error_Handler();
+	}
+	// erase sectors 254 and 255
+	FLASH_EraseInitTypeDef erase_params;
+	erase_params.TypeErase = FLASH_TYPEERASE_SECTORS;
+	erase_params.Banks = FLASH_BANK_2;
+	erase_params.Sector = FLASH_SECTOR_126;
+	erase_params.NbSectors = 2;
+	erase_params.VoltageRange = 0;
+	uint32_t sectorError = 0;
+	status = HAL_FLASHEx_Erase(&erase_params, &sectorError);
+	if (status != HAL_OK)
+	{
+		Error_Handler();
+	}
+	// wait for erase to complete
+	// write to sector 254
+	for (uint32_t i = 0; i < sizeof(FlashConfig); i += 16)
+	{
+		status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, (uint32_t)(&_app_config_block_0 + i), (uint32_t)((uint8_t *)&gAppRamConfig + i));
+		if (status != HAL_OK)
+		{
+			Error_Handler();
+		}
+	}
+	for (uint32_t i = 0; i < sizeof(FlashConfig); i += 16)
+	{
+		status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_FLASHWORD, (uint32_t)(&_app_config_block_1 + i), (uint32_t)((uint8_t *)&gAppRamConfig + i));
+		if (status != HAL_OK)
+		{
+			Error_Handler();
+		}
+	}
+	status = HAL_FLASH_Lock();
+	if (status != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
+
+void FlashConfigReset(void) {
+	// Reset to default values
+	gAppRamConfig.DAC1_CalC0 = 0.0f;
+	gAppRamConfig.DAC1_CalC1 = 1.0f;
+	gAppRamConfig.DAC2_CalC0 = 0.0f;
+	gAppRamConfig.DAC2_CalC1 = 1.0f;
+	gAppRamConfig.nwrites = 0;
+	FlashConfigSave();
+}
+
+void FlashConfigInit(void) {
+	// Validate CRCs
+	uint32_t block_0_good = 0;
+	uint32_t block_1_good = 0;
+	uint32_t crc0 = HAL_CRC_Calculate(&hcrc, (uint32_t *)&_app_config_block_0, sizeof(FlashConfig) / 4 - 1);
+	uint32_t crc1 = HAL_CRC_Calculate(&hcrc, (uint32_t *)&_app_config_block_1, sizeof(FlashConfig) / 4 - 1);
+	if (crc0 == mAppConfigBlock0->crc) {
+		block_0_good = 1;
+		for (uint32_t i=0; i<sizeof(FlashConfig); i++) {
+			((uint8_t *)&gAppRamConfig)[i] = ((uint8_t *)mAppConfigBlock0)[i];
+		}
+	} else if (crc1 == mAppConfigBlock1->crc) {
+		block_1_good = 1;
+		for (uint32_t i = 0; i < sizeof(FlashConfig); i++) {
+			((uint8_t *)&gAppRamConfig)[i] = ((uint8_t *)mAppConfigBlock1)[i];
+		}
+	} else {
+		block_0_good = 1;
+		block_1_good = 1;
+		FlashConfigReset();
+	}
+}
 
 /**
  * @brief  The application entry point.
@@ -62,6 +165,11 @@ int main(void)
 	MX_TIM12_Init();
 	MX_TIM13_Init();
 	MX_USB_DEVICE_Init();
+
+	// Load config from flash
+	FlashConfigInit();
+
+	DacInit(gAppRamConfig.DAC1_CalC0, gAppRamConfig.DAC1_CalC1, gAppRamConfig.DAC2_CalC0, gAppRamConfig.DAC2_CalC1);
 	// The detector driver may take a while to reset
 	HAL_Delay(200);
 	DetCtrlInit();
