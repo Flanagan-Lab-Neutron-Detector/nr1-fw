@@ -22,6 +22,10 @@ typedef struct
 {
     uint32_t ActiveCountsReset;
     uint32_t ActiveCountsWpAcc;
+    float    Dac1CalC0; // DAC 1 calibration constant coefficient
+    float    Dac1CalC1; // DAC 1 calibration linear coefficient
+    float    Dac2CalC0; // DAC 1 calibration constant coefficient
+    float    Dac2CalC1; // DAC 1 calibration linear coefficient
 } S_DacVariables;
 
 extern S_DacVariables gDac;
@@ -34,13 +38,16 @@ typedef enum {
     DAC_ERR_INVALID_CHANNEL // Invalid DAC channel
 } DacError;
 
+extern DacError DacInit(float Dac1CalC0, float Dac1CalC1, float Dac2CalC0, float Dac2CalC1);
 extern DacError DacWriteOutput(uint32_t unit, uint32_t counts);
 
 // #define			SET_RESET_VOLTAGE(V)		gDac.ActiveCountsReset = (uint16_t)(gRamConfig.Ana_Reset10VCnts * ((float)(V)/10.0))
 // #define			SET_WP_ACC_VOLTAGE(V)		gDac.ActiveCountsWpAcc = (uint16_t)(gRamConfig.Ana_WpAcc10VCnts * ((float)(V)/10.0))
 
-#define SET_RESET_MV(V) DacWriteOutput(1, (V)*128)
-#define SET_WP_ACC_MV(V) DacWriteOutput(2, (V)*128 / 2)
+#define DAC1_CALIBRATED(V) (gDac.Dac1CalC0 + gDac.Dac1CalC1*((float)(V)))
+#define DAC2_CALIBRATED(V) (gDac.Dac2CalC0 + gDac.Dac2CalC1*((float)(V)))
+#define SET_RESET_MV(V) DacWriteOutput(1, DAC1_CALIBRATED(V)*128)
+#define SET_WP_ACC_MV(V) DacWriteOutput(2, DAC2_CALIBRATED(V)*(128/2))
 
 #define WP_ACC_LOW SET_WP_ACC_MV(0)
 #define WP_ACC_HIGH SET_WP_ACC_MV(3300)

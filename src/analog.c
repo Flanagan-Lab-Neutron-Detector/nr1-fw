@@ -29,6 +29,22 @@ union analog_set_frame {
     };
 };
 
+DacError DacInit(float Dac1CalC0, float Dac1CalC1, float Dac2CalC0, float Dac2CalC1)
+{
+    gDac.Dac1CalC0 = Dac1CalC0;
+    gDac.Dac1CalC1 = Dac1CalC1;
+    gDac.Dac2CalC0 = Dac2CalC0;
+    gDac.Dac2CalC1 = Dac2CalC1;
+
+    DacError err = DAC_SUCCESS;
+    err = DacWriteOutput(1, 0);
+    if (err != DAC_SUCCESS) return err;
+    err = DacWriteOutput(2, 0);
+    if (err != DAC_SUCCESS) return err;
+
+    return DAC_SUCCESS;
+}
+
 static HAL_StatusTypeDef dac_send(uint32_t unit, uint32_t counts)
 {
     union analog_set_frame spi_cmd;
