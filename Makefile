@@ -101,7 +101,7 @@ PROG = STM32_Programmer_CLI
 PROG_PORT = swd
 PROG_FREQ = 24000
 PROG_ADDR = 0x8000000
-PROG_ARGS = -c port=$(PROG_PORT) freq=$(PROG_FREQ) -d $(BUILD_DIR)/$(TARGET).bin $(PROG_ADDR) -v
+PROG_ARGS = -c port=$(PROG_PORT) freq=$(PROG_FREQ) mode=UR -d $(BUILD_DIR)/$(TARGET).bin $(PROG_ADDR) -v
 else ifeq ($(PROGRAMMER), stflash)
 PROG = st-flash
 PROG_ARGS = --reset write $(BUILD_DIR)/$(TARGET).bin 0x8000000
