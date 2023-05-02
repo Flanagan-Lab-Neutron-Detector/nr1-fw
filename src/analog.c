@@ -13,7 +13,8 @@
 #include "main.h"
 
 // globals
-S_DacVariables gDac;
+DacVariables gDac1;
+DacVariables gDac2;
 
 // dac management
 extern SPI_HandleTypeDef hspi1; // defined in main.c
@@ -31,10 +32,10 @@ union analog_set_frame {
 
 DacError DacInit(float Dac1CalC0, float Dac1CalC1, float Dac2CalC0, float Dac2CalC1)
 {
-    gDac.Dac1CalC0 = Dac1CalC0;
-    gDac.Dac1CalC1 = Dac1CalC1;
-    gDac.Dac2CalC0 = Dac2CalC0;
-    gDac.Dac2CalC1 = Dac2CalC1;
+    gDac1.CalC0 = Dac1CalC0;
+    gDac1.CalC1 = Dac1CalC1;
+    gDac2.CalC0 = Dac2CalC0;
+    gDac2.CalC1 = Dac2CalC1;
 
     DacError err = DAC_SUCCESS;
     err = DacWriteOutput(1, 0);
@@ -51,11 +52,11 @@ static HAL_StatusTypeDef dac_send(uint32_t unit, uint32_t counts)
 
     switch (unit) {
         case 1:
-            spi_cmd.microvolts = gDac.ActiveCountsReset = counts & 0x007FFFFF;
+            spi_cmd.microvolts = gDac1.ActiveCounts = counts & 0x007FFFFF;
             spi_cmd.address = 0x0;
             break;
         case 2:
-            spi_cmd.microvolts = gDac.ActiveCountsWpAcc = counts & 0x007FFFFF;
+            spi_cmd.microvolts = gDac2.ActiveCounts = counts & 0x007FFFFF;
             spi_cmd.address = 0x1;
             break;
     }
