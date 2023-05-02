@@ -23,12 +23,12 @@ extern "C" {
 
 /**
  * @brief HPT Bus command/response enum. Unique ID for each message (command or response). Valid range: [0,255]
- * 
+ *
  */
 typedef enum __attribute__((__packed__))
 {
 	HPT_NULL_MSG_CMD				= 0,		// not allowed
-	
+
 	HPT_PING_CMD					= 2,
 	HPT_PING_RSP					= 3,
 
@@ -66,7 +66,7 @@ typedef enum __attribute__((__packed__))
 } HPT_CmdRespEnum;
 
 #define		HPT_MAX_PAYLOAD		    1088
-	
+
 /////////////////////  COMMANDS  ////////////////////////
 
 typedef __PACKED_STRUCT
@@ -154,18 +154,20 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
-	uint16_t		Ce10VCalCounts;
-	uint16_t		Reset10VCalCounts;
-	uint16_t		WpAcc10VCalCounts;
-	uint16_t		Spare10VCalCounts;
+	uint32_t		AnalogUnit; // 0=CE 1=RESET 2=WP/ACC 3=SPARE
+} HPT_AnaGetCalCountsCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	float			CalC0;
+	float			CalC1;
 } HPT_AnaGetCalCountsRsp;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
-	uint16_t		Ce10VCalCounts;
-	uint16_t		Reset10VCalCounts;
-	uint16_t		WpAcc10VCalCounts;
-	uint16_t		Spare10VCalCounts;
+	uint32_t		AnalogUnit; // 0=CE 1=RESET 2=WP/ACC 3=SPARE
+	float			CalC0;
+	float			CalC1;
 } HPT_AnaSetCalCountsCmd;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
@@ -178,10 +180,10 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 
 /**
  * @brief HPT Bus message command/response structure
- * 
+ *
  * Holds header and union of all payloads. CRC is placed after
  * the message payload, at RawData32Bit[(Length-4)/4].
- * 
+ *
  */
 typedef __PACKED_UNION __ALIGNED(4)
 {
@@ -206,11 +208,12 @@ typedef __PACKED_UNION __ALIGNED(4)
 			HPT_WriteDataCmd			WriteDataCmd;
 			HPT_ReadWordCmd				ReadWordCmd;
 			HPT_ReadWordRsp				ReadWordRsp;
-			
+
+			HPT_AnaGetCalCountsCmd		AnaGetCalCountsCmd;
 			HPT_AnaGetCalCountsRsp		AnaGetCalCountsRsp;
 			HPT_AnaSetCalCountsCmd		AnaSetCalCountsCmd;
 			HPT_AnaSetActiveCountsCmd	AnaSetActiveCountsCmd;
-			
+
 			HPT_NoDataCmdRsp            NoDataCmdRsp;
 		};
 	};

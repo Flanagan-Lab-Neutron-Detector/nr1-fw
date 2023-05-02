@@ -123,6 +123,36 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_ComMsg *rsp)
 }
 
 /**
+ * @brief Handle analog set calibration counts
+ *
+ * Sets calibration counts for the specified analog unit. NR1B supports units 1 (reset/vwl) and 2 (wp).
+ *
+ * @note Runs in USB interrupt
+ *
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_ComMsg *rsp)
+{
+	switch (cmd->AnalogUnit)
+	{
+		case 1:
+			gDac1.CalC0 = cmd->CalC0;
+			gDac1.CalC1 = cmd->CalC1;
+			rsp->CmdRsp = HPT_ANA_SET_CAL_COUNTS_RSP;
+			break;
+		case 2:
+			gDac2.CalC0 = cmd->CalC0;
+			gDac2.CalC1 = cmd->CalC1;
+			rsp->CmdRsp = HPT_ANA_SET_CAL_COUNTS_RSP;
+			break;
+		default:
+			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+			break;
+	}
+}
+
+/**
  * @brief Handle analog set active counts
  *
  * Sets counts for the specified analog unit. NR1B supports units 1 (reset/vwl) and 2 (wp).
@@ -199,7 +229,26 @@ uint32_t comms_usb_hpt_receive_msg(HPT_ComMsg *msg)
 		g_msg_rsp.PingRsp.VersionString[7] = 't';
 		g_msg_rsp.PingRsp.VersionString[8] = '\0';
 		g_msg_rsp.PingRsp.IsDetectorBusy = g_comms_cmd_req != HPT_NULL_MSG_CMD;
+	} else if (cmd == HPT_ANA_GET_CAL_COUNTS_CMD && (msg->AnaGetCalCountsCmd.AnalogUnit == 1 || msg->AnaGetCalCountsCmd.AnalogUnit == 2)) {
+		// Parse DAC unit
+		float CalC0 = 0, CalC1 = 0;
+		switch (msg->AnaGetCalCountsCmd.AnalogUnit) {
+			case 1:
+				CalC0 = gDac1.CalC0;
+				CalC1 = gDac1.CalC1;
+				break;
+			case 2:
+				CalC0 = gDac2.CalC0;
+				CalC1 = gDac2.CalC1;
+				break;
+		}
+		// Send response
+		g_msg_rsp.Length += sizeof(HPT_AnaGetCalCountsRsp);
+		g_msg_rsp.CmdRsp = HPT_ANA_GET_CAL_COUNTS_RSP;
+		g_msg_rsp.AnaGetCalCountsRsp.CalC0 = CalC0;
+		g_msg_rsp.AnaGetCalCountsRsp.CalC1 = CalC1;
 	} else if (g_comms_cmd_req != HPT_NULL_MSG_CMD) {
+		// Command in progress
 		g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP;
 	} else {
 		switch (cmd) {
@@ -230,11 +279,8 @@ uint32_t comms_usb_hpt_receive_msg(HPT_ComMsg *msg)
 			case HPT_READ_WORD_CMD:
 				comms_hpt_handle_read_word_cmd(&msg->ReadWordCmd, &g_msg_rsp);
 				break;
-			case HPT_ANA_GET_CAL_COUNTS_CMD:
-				g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP;
-				break;
 			case HPT_ANA_SET_CAL_COUNTS_CMD:
-				g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP;
+				comms_hpt_handle_ana_set_cal_counts(&msg->AnaSetCalCountsCmd, &g_msg_rsp);
 				break;
 			case HPT_ANA_SET_ACTIVE_COUNTS_CMD:
 				comms_hpt_handle_ana_set_active_counts(&msg->AnaSetActiveCountsCmd, &g_msg_rsp);
