@@ -184,7 +184,9 @@ int main(void)
 	{
 		if (gMainLoopSemaphore) {
 			gMainLoopSemaphore = 0;
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
 			comms_usb_hpt_tick();
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
 
 		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
