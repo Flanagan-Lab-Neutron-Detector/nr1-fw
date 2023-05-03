@@ -86,5 +86,13 @@ DacError DacWriteOutput(uint32_t unit, uint32_t counts)
         ret = DAC_ERR_INVALID_CHANNEL;
     }
 
+    if (ret == DAC_SUCCESS) {
+        if (unit == 1) {
+            gDac1.ActiveCounts = counts;
+        } else if (unit == 2) {
+            gDac2.ActiveCounts = counts;
+        }
+    }
+
     return ret;
 }
