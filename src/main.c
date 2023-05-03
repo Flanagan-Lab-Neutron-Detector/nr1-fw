@@ -193,11 +193,11 @@ int main(void)
 		while (gMainLoopSemaphore) {
 			gMainLoopSemaphore = 0;
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
+			comms_usb_hpt_tick();
 			if (g_config_save_requested) {
 				g_config_save_requested = 0;
 				FlashConfigSave();
 			}
-			comms_usb_hpt_tick();
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
 
