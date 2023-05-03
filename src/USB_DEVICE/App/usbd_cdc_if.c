@@ -289,9 +289,8 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 
     if (send_data != NULL && send_len != 0)
       CDC_Transmit_HS(send_data, send_len);
-
-    HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
   }
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
   USBD_CDC_ReceivePacket(&hUsbDeviceHS);
   return (USBD_OK);
   /* USER CODE END 11 */
