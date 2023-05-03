@@ -14,6 +14,9 @@
 // debug
 #include <stdio.h>
 
+// TODO: Move this to a header
+extern uint32_t g_config_save_requested;
+
 extern CRC_HandleTypeDef hcrc;
 
 /**
@@ -140,11 +143,13 @@ void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_ComMsg
 			gDac1.CalC0 = cmd->CalC0;
 			gDac1.CalC1 = cmd->CalC1;
 			rsp->CmdRsp = HPT_ANA_SET_CAL_COUNTS_RSP;
+			g_config_save_requested = 1;
 			break;
 		case 2:
 			gDac2.CalC0 = cmd->CalC0;
 			gDac2.CalC1 = cmd->CalC1;
 			rsp->CmdRsp = HPT_ANA_SET_CAL_COUNTS_RSP;
+			g_config_save_requested = 1;
 			break;
 		default:
 			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;

@@ -22,6 +22,8 @@ TIM_HandleTypeDef  htim12;
 TIM_HandleTypeDef  htim13;
 
 int gMainLoopSemaphore;
+// TODO: Move this to a header?
+uint32_t g_config_save_requested;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -60,6 +62,12 @@ FlashConfig gAppRamConfig;
 void FlashConfigSave(void)
 {
 	HAL_StatusTypeDef status = HAL_OK;
+	// pull in config
+	// TODO: do this better
+	gAppRamConfig.DAC1_CalC0 = gDac1.CalC0;
+	gAppRamConfig.DAC1_CalC1 = gDac1.CalC1;
+	gAppRamConfig.DAC2_CalC0 = gDac2.CalC0;
+	gAppRamConfig.DAC2_CalC1 = gDac2.CalC1;
 	gAppRamConfig.nwrites++;
 	// calculate CRC in ram
 	gAppRamConfig.crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)gAppRamConfig.raw_payload, sizeof(gAppRamConfig) / 4 - 1);
@@ -185,6 +193,10 @@ int main(void)
 		if (gMainLoopSemaphore) {
 			gMainLoopSemaphore = 0;
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
+			if (g_config_save_requested) {
+				g_config_save_requested = 0;
+				FlashConfigSave();
+			}
 			comms_usb_hpt_tick();
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
