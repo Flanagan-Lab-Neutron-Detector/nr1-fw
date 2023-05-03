@@ -190,7 +190,7 @@ int main(void)
 	/* Infinite loop */
 	while (1)
 	{
-		if (gMainLoopSemaphore) {
+		while (gMainLoopSemaphore) {
 			gMainLoopSemaphore = 0;
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);
 			if (g_config_save_requested) {
