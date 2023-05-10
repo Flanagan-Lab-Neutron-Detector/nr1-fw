@@ -101,18 +101,26 @@ void DetReset(void)
 }
 
 //extern void Manual_WriteWord_internal(uint32_t addr, uint16_t word);
-void DetEnterVtMode(void)
+int DetEnterVtMode(void)
 {
 	//DET_WE_HIGH;
 	CE_SWITCH_ANA; // Send analog CE to chip
 	detDelay(400);
 
-	SET_WP_ACC_MV(12500);
-	RESET_HIGH;
+	DacError dacerr = DAC_SUCCESS;
+
+	dacerr = SET_WP_ACC_MV(12500);
+	if (dacerr != DAC_SUCCESS)
+		return 1;
+
+	dacerr = RESET_HIGH;
+	if (dacerr != DAC_SUCCESS)
+		return 2;
 
 	detDelay(1000);
 
-	DetSetVt(3000); // Safe default to 3V. Users should call DetSetVt
+	if (DetSetVt(3000)) // Safe default to 3V. Users should call DetSetVt
+		return 3;
 
 	gDetApi->WriteWord(0x00000000<<1, 0x0080);
 	gDetApi->WriteWord(0x00000000<<1, 0x0001);
@@ -123,21 +131,31 @@ void DetEnterVtMode(void)
 	gDetApi->EnterVt();
 	//DET_WE_LOW;
 	detDelay(10); // wait at least 200 ns
+
+	return 0;
 }
 
-void DetSetVt(uint32_t vt_mv)
+int DetSetVt(uint32_t vt_mv)
 {
-	SET_RESET_MV(vt_mv);
+	DacError dacerr = DAC_SUCCESS;
+	dacerr = SET_RESET_MV(vt_mv);
+	if (dacerr != DAC_SUCCESS)
+		return 1;
 
 	detDelay(10000);
+	return 0;
 }
 
-void DetExitVtMode(void)
+int DetExitVtMode(void)
 {
-	//DET_WE_HIGH;
-	//CE_ANA_HIGH;
-	WP_ACC_HIGH;
-	RESET_HIGH;
+	DacError dacerr = DAC_SUCCESS;
+
+	dacerr = WP_ACC_HIGH;
+	if (dacerr != DAC_SUCCESS)
+		return 1;
+	dacerr = RESET_HIGH;
+	if (dacerr != DAC_SUCCESS)
+		return 2;
 
 	detDelay(100);
 	gDetApi->ExitVt();
@@ -145,6 +163,7 @@ void DetExitVtMode(void)
 	CE_SWITCH_DIG;					// Send digital CE to chip
 
 	//gDetIsInVtMode = false;
+	return 0;
 }
 
 void DetReadIdCfiData(S_DeviceInformation *detInfo, uint32_t SectorAddress)

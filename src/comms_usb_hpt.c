@@ -74,21 +74,27 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
 	uint32_t vtMv = cmd->BitReadMv;
 	uint32_t addr = cmd->BaseAddress * 2;
 
+	int iserr = 0;
+
 	if (isVt)
 	{
-		DetEnterVtMode();
-		DetSetVt(vtMv);
+		iserr |= DetEnterVtMode();
+		iserr |= DetSetVt(vtMv);
 	}
 
 	gDetApi->ReadBlock(addr, 512, rsp->ReadDataRsp.Data);
 
 	if (isVt)
 	{
-		DetExitVtMode();
+		iserr |= DetExitVtMode();
 	}
 
-	rsp->CmdRsp = HPT_READ_DATA_RSP;
-	rsp->Length += sizeof(HPT_ReadDataRsp);
+	if (iserr) {
+		rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+	} else {
+		rsp->CmdRsp = HPT_READ_DATA_RSP;
+		rsp->Length += sizeof(HPT_ReadDataRsp);
+	}
 }
 
 /**

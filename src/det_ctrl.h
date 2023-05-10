@@ -41,9 +41,9 @@ typedef enum {
 EXTERN det_mode gDetMode;
 
 extern void DetReset(void);
-extern void DetEnterVtMode(void);
-extern void DetSetVt(uint32_t vt_mv);
-extern void DetExitVtMode(void);
+extern int DetEnterVtMode(void);
+extern int DetSetVt(uint32_t vt_mv);
+extern int DetExitVtMode(void);
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
