@@ -52,11 +52,11 @@ static HAL_StatusTypeDef dac_send(uint32_t unit, uint32_t counts)
 
     switch (unit) {
         case 1:
-            spi_cmd.microvolts = gDac1.ActiveCounts = counts & 0x007FFFFF;
+            spi_cmd.microvolts = counts & 0x007FFFFF;
             spi_cmd.address = 0x0;
             break;
         case 2:
-            spi_cmd.microvolts = gDac2.ActiveCounts = counts & 0x007FFFFF;
+            spi_cmd.microvolts = counts & 0x007FFFFF;
             spi_cmd.address = 0x1;
             break;
     }
