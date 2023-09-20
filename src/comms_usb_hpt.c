@@ -72,7 +72,7 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
 {
 	uint32_t isVt = cmd->VtMode;
 	uint32_t vtMv = cmd->BitReadMv;
-	uint32_t addr = cmd->BaseAddress * 2;
+	uint32_t addr = cmd->BaseAddress;
 
 	int iserr = 0;
 
@@ -241,6 +241,7 @@ uint32_t comms_usb_hpt_receive_msg(HPT_ComMsg *msg)
 		g_msg_rsp.PingRsp.VersionString[6] = 's';
 		g_msg_rsp.PingRsp.VersionString[7] = 't';
 		g_msg_rsp.PingRsp.VersionString[8] = '\0';
+		for (uint32_t i=9; i<16; i++) g_msg_rsp.PingRsp.VersionString[i] = 0;
 		g_msg_rsp.PingRsp.IsDetectorBusy = g_comms_cmd_req != HPT_NULL_MSG_CMD;
 	} else if (cmd == HPT_ANA_GET_CAL_COUNTS_CMD && (msg->AnaGetCalCountsCmd.AnalogUnit == 1 || msg->AnaGetCalCountsCmd.AnalogUnit == 2)) {
 		// Parse DAC unit
@@ -354,22 +355,22 @@ void comms_usb_hpt_tick(void)
 		case HPT_ERASE_SECTOR_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_ERASE_SECTOR_CMD");
 			DetReset();
-			gDetApi->EraseSector(2*m_cmd_copy.EraseSectorCmd.SectorAddress);
+			gDetApi->EraseSector(m_cmd_copy.EraseSectorCmd.SectorAddress);
 			break;
 		case HPT_PROGRAM_SECTOR_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_PROGRAM_SECTOR_CMD");
 			DetReset();
-			DetCmdProgramSector(2*m_cmd_copy.ProgramSectorCmd.SectorAddress, m_cmd_copy.ProgramSectorCmd.ProgramValue);
+			DetCmdProgramSector(m_cmd_copy.ProgramSectorCmd.SectorAddress, m_cmd_copy.ProgramSectorCmd.ProgramValue);
 			break;
 		case HPT_PROGRAM_CHIP_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_PROGRAM_CHIP_CMD");
 			DetReset();
 			for (uint32_t i=0; i<1024; i++)
-				DetCmdProgramSector(i * 2*0x10000, m_cmd_copy.ProgramChipCmd.ProgramValue);
+				DetCmdProgramSector(i * 0x10000, m_cmd_copy.ProgramChipCmd.ProgramValue);
 			break;
 		case HPT_WRITE_DATA_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_WRITE_DATA_CMD");
-			gDetApi->ProgramBuffer(2*m_cmd_copy.WriteDataCmd.BaseAddress, m_cmd_copy.WriteDataCmd.Data, m_cmd_copy.WriteDataCmd.NumWords);
+			gDetApi->ProgramBuffer(m_cmd_copy.WriteDataCmd.BaseAddress, m_cmd_copy.WriteDataCmd.Data, m_cmd_copy.WriteDataCmd.NumWords);
 			break;
 		default:
 			if (g_comms_cmd_req != HPT_NULL_MSG_CMD)
