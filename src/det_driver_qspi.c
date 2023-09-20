@@ -45,8 +45,6 @@ void QSPI_Close(void)
 
 uint16_t QSPI_ReadWord(uint32_t addr)
 {
-	// address is byte-aligned but QSPI operates on 16 bit words
-	addr >>= 1;
 	OSPI_RegularCmdTypeDef cmd = {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
@@ -114,9 +112,8 @@ void QSPI_ReadWords(uint32_t *addrs, uint16_t *dest, uint32_t count)
 
 void QSPI_ReadBlock(uint32_t base, uint32_t count, uint16_t *dest)
 {
-	// address is byte-aligned but QSPI operates on 16 bit words
 	for (uint32_t i=0; i<count; i++)
-		dest[i] = QSPI_ReadWord(base + 2*i);
+		dest[i] = QSPI_ReadWord(base + i);
 }
 
 void QSPI_ReadPage(uint32_t PageAddress, uint16_t *dest)
@@ -125,8 +122,6 @@ void QSPI_ReadPage(uint32_t PageAddress, uint16_t *dest)
 }
 
 void QSPI_WriteWord(uint32_t addr, uint16_t word) {
-	// address is byte-aligned but QSPI operates on 16 bit words
-	addr >>= 1;
 	// OSPI shifts out little-endian but we need big-endian
 	word = ((word & 0x00FF) << 8) | ((word & 0xFF00) >> 8);
 	OSPI_RegularCmdTypeDef cmd = {
@@ -167,17 +162,14 @@ void QSPI_WriteWords(uint32_t *addrs, uint16_t *words, uint32_t count)
 	}
 }
 
-void QSPI_WriteBlock(uint32_t base, uint32_t count, void *block)
+void QSPI_WriteBlock(uint32_t base, uint32_t count, uint16_t *block)
 {
-	uint16_t *data = (uint16_t*)block;
 	for (uint32_t i=0; i<count; i++)
-		QSPI_WriteWord(base + 2*i, data[i]);
+		QSPI_WriteWord(base + i, block[i]);
 }
 
 void QSPI_ProgramWord(uint32_t Address, uint16_t word)
 {
-	// address is byte-aligned but QSPI operates on 16 bit words
-	Address >>= 1;
 	OSPI_RegularCmdTypeDef cmd = {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
@@ -209,23 +201,20 @@ void QSPI_ProgramWord(uint32_t Address, uint16_t word)
 	if (status != HAL_OK) Error_Handler();
 }
 
-void QSPI_ProgramBuffer(uint32_t SectorAddress, void *data, uint16_t count)
+void QSPI_ProgramBuffer(uint32_t SectorAddress, uint16_t *data, uint16_t count)
 {
-	uint16_t *words = (uint16_t*)data;
 	for (uint32_t i=0; i<count; i++)
-		QSPI_ProgramWord(SectorAddress + 2*i, words[i]);
+		QSPI_ProgramWord(SectorAddress + i, data[i]);
 }
 
 void QSPI_ProgramBuffer_single(uint32_t SectorAddress, uint16_t word, uint16_t count)
 {
 	for (uint32_t i=0; i<count; i++)
-		QSPI_ProgramWord(SectorAddress + 2*i, word);
+		QSPI_ProgramWord(SectorAddress + i, word);
 }
 
 void QSPI_EraseSector(uint32_t SectorAddress)
 {
-	// address is byte-aligned but QSPI operates on 16 bit words
-	SectorAddress >>= 1;
 	OSPI_RegularCmdTypeDef cmd = {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,

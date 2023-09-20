@@ -122,10 +122,10 @@ int DetEnterVtMode(void)
 	if (DetSetVt(3000)) // Safe default to 3V. Users should call DetSetVt
 		return 3;
 
-	gDetApi->WriteWord(0x00000000<<1, 0x0080);
-	gDetApi->WriteWord(0x00000000<<1, 0x0001);
-	gDetApi->WriteWord(0x00000000<<1, 0x0080);
-	gDetApi->WriteWord(0x00000008<<1, 0x0012);
+	gDetApi->WriteWord(0x00000000, 0x0080);
+	gDetApi->WriteWord(0x00000000, 0x0001);
+	gDetApi->WriteWord(0x00000000, 0x0080);
+	gDetApi->WriteWord(0x00000008, 0x0012);
 
 	detDelay(100); // wait at least 1 us
 	gDetApi->EnterVt();
@@ -176,7 +176,7 @@ void DetReadIdCfiData(S_DeviceInformation *detInfo, uint32_t SectorAddress)
 
 	gDetApi->WriteCommandWord(SectorAddress + 0xAA, 0x98);
 
-#define BYTE_READ(A, C, DST) for (uint32_t i=0; i<(C); i++) { *(((uint8_t*)(DST) + 2*i)) = (uint8_t)gDetApi->ReadWord((A) + 2*i); }
+#define BYTE_READ(A, C, DST) for (uint32_t i=0; i<(C); i++) { *(((uint8_t*)(DST) + 2*i)) = (uint8_t)gDetApi->ReadWord((A) + i); }
 
 	// Read ID/Autoselect entry
 	//gDetApi->ReadBlock(SectorAddress + 0x0000, 16, &detInfo->ID.ManufacturerID);
@@ -184,23 +184,23 @@ void DetReadIdCfiData(S_DeviceInformation *detInfo, uint32_t SectorAddress)
 
 	// Read CFI Query Identification String
 	//gDetApi->ReadBlock(SectorAddress + (0x0010<<1), 11, &detInfo->CfiQuery.Q);
-	BYTE_READ(SectorAddress + (0x0010<<1), 11, &detInfo->CfiQuery);
+	BYTE_READ(SectorAddress + (0x0010), 11, &detInfo->CfiQuery);
 
 	// Read CFI System Interface String
 	//gDetApi->ReadBlock(SectorAddress + (0x001B<<1), 12, &detInfo->CfiInterface.VccMin);
-	BYTE_READ(SectorAddress + (0x001B<<1), 12, &detInfo->CfiInterface);
+	BYTE_READ(SectorAddress + (0x001B), 12, &detInfo->CfiInterface);
 
 	// Read CFI Device Geometry String
 	//gDetApi->ReadBlock(SectorAddress + (0x0027<<1), 25, &detInfo->CfiGeo.Size);
-	BYTE_READ(SectorAddress + (0x0027<<1), 25, &detInfo->CfiGeo);
+	BYTE_READ(SectorAddress + (0x0027), 25, &detInfo->CfiGeo);
 
 	// Read CFI Primary Vendor-Specific Extended Query
 	//gDetApi->ReadBlock(SectorAddress + (0x0040<<1), 62, &detInfo->CfiExtQuery.P);
-	BYTE_READ(SectorAddress + (0x0040<<1), 62, &detInfo->CfiExtQuery);
+	BYTE_READ(SectorAddress + (0x0040), 62, &detInfo->CfiExtQuery);
 
 	// Read ID-CFI ASO Map
 	//gDetApi->ReadBlock(SectorAddress + (0x0080<<1), sizeof(detInfo->IdCfiAsoMap)/2, &detInfo->IdCfiAsoMap.ElectronicMarkingSize);
-	BYTE_READ(SectorAddress + (0x0080<<1), sizeof(detInfo->IdCfiAsoMap)/2, &detInfo->IdCfiAsoMap);
+	BYTE_READ(SectorAddress + (0x0080), sizeof(detInfo->IdCfiAsoMap)/2, &detInfo->IdCfiAsoMap);
 
 #undef BYTE_READ
 
@@ -306,7 +306,7 @@ void DetCmdProgramSector(uint32_t address, uint16_t word)
 	for (uint32_t i=0; i<4096; i++)
 	{
 		for (uint32_t j=0; j<8; j++) {
-			gDetApi->ProgramWord(address + 16*i + 2*j, word);
+			gDetApi->ProgramWord(address + 8*i + j, word);
 			HAL_Delay(1);
 		}
 		/*gDetApi->ProgramBuffer_single(address + 16*i, word, 16);
@@ -326,7 +326,7 @@ uint32_t DetCmdCountBitsSector(uint32_t address)
 	//   Count bits
 	for (uint32_t i=0; i<16; i++)
 	{
-		gDetApi->ReadBlock(address + 512*8*2*i, 512*8, mDataBlock);
+		gDetApi->ReadBlock(address + 512*8*i, 512*8, mDataBlock);
 		ret += CountBitsInRange(mDataBlock, 0, 512*8);
 	}
 
