@@ -239,6 +239,7 @@ uint32_t comms_usb_hpt_receive_msg(HPT_ComMsg *msg)
 		g_msg_rsp.PingRsp.VersionString[6] = 's';
 		g_msg_rsp.PingRsp.VersionString[7] = 't';
 		g_msg_rsp.PingRsp.VersionString[8] = '\0';
+		for (uint32_t i=9; i<16; i++) g_msg_rsp.PingRsp.VersionString[i] = 0;
 		g_msg_rsp.PingRsp.IsDetectorBusy = g_comms_cmd_req != HPT_NULL_MSG_CMD;
 	} else if (cmd == HPT_ANA_GET_CAL_COUNTS_CMD && (msg->AnaGetCalCountsCmd.AnalogUnit == 1 || msg->AnaGetCalCountsCmd.AnalogUnit == 2)) {
 		// Parse DAC unit
