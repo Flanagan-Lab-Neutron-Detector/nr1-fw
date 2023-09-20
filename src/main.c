@@ -201,6 +201,15 @@ int main(void)
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
 
+		// disable comms interrupt
+		NVIC_DisableIRQ(OTG_HS_IRQn);
+		if (gDetVtRequested) {
+			DetExitVtMode();
+			gDetVtRequested = 0;
+		}
+		// enable comms interrupt
+		NVIC_EnableIRQ(OTG_HS_IRQn);
+
 		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
 }

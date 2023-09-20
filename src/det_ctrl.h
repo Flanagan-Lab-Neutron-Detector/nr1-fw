@@ -30,8 +30,9 @@ extern "C" {
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-EXTERN uint32_t					gDetIsInVtMode;
-EXTERN uint16_t					gDetVt_mV;				///< Current Vt voltage in mV
+EXTERN volatile uint32_t				gDetIsInVtMode;
+EXTERN volatile uint16_t				gDetVt_mV;				///< Current Vt voltage in mV
+EXTERN volatile uint32_t                gDetVtRequested;        ///< A Vt operation was requested in this cycle
 
 typedef enum {
 	DET_MODE_BYTE,

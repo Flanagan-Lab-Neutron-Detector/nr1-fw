@@ -103,6 +103,9 @@ void DetReset(void)
 //extern void Manual_WriteWord_internal(uint32_t addr, uint16_t word);
 int DetEnterVtMode(void)
 {
+	gDetVtRequested = 1;
+	if (gDetIsInVtMode) return 0;
+
 	//DET_WE_HIGH;
 	CE_SWITCH_ANA; // Send analog CE to chip
 	detDelay(400);
@@ -132,11 +135,14 @@ int DetEnterVtMode(void)
 	//DET_WE_LOW;
 	detDelay(10); // wait at least 200 ns
 
+	gDetIsInVtMode = 1;
+
 	return 0;
 }
 
 int DetSetVt(uint32_t vt_mv)
 {
+	gDetVtRequested = 1;
 	DacError dacerr = DAC_SUCCESS;
 	dacerr = SET_RESET_MV(vt_mv);
 	if (dacerr != DAC_SUCCESS)
@@ -162,7 +168,7 @@ int DetExitVtMode(void)
 
 	CE_SWITCH_DIG;					// Send digital CE to chip
 
-	//gDetIsInVtMode = false;
+	gDetIsInVtMode = 0;
 	return 0;
 }
 
