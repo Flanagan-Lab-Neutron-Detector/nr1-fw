@@ -98,6 +98,9 @@ void DetReset(void)
 	//		TP1_HIGH;
 
 	//SSP_CRITICAL_SECTION_EXIT;		// restore interrupts
+
+	gDetIsInVtMode = 0;
+	gDetVtRequested = 0;
 }
 
 //extern void Manual_WriteWord_internal(uint32_t addr, uint16_t word);
@@ -154,6 +157,8 @@ int DetSetVt(uint32_t vt_mv)
 
 int DetExitVtMode(void)
 {
+	if (!gDetIsInVtMode) return 0;
+
 	DacError dacerr = DAC_SUCCESS;
 
 	dacerr = WP_ACC_HIGH;

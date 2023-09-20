@@ -187,6 +187,9 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim13);
 
+	#define DET_RESET_PERIOD 100
+	uint32_t det_reset_count = 0;
+
 	/* Infinite loop */
 	while (1)
 	{
@@ -201,14 +204,18 @@ int main(void)
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
 
-		// disable comms interrupt
-		NVIC_DisableIRQ(OTG_HS_IRQn);
-		if (gDetVtRequested) {
-			DetExitVtMode();
+		det_reset_count++;
+		if (det_reset_count >= DET_RESET_PERIOD) {
+			det_reset_count = 0;
+			// disable comms interrupt
+			NVIC_DisableIRQ(OTG_HS_IRQn);
+			if (!gDetVtRequested) {
+				DetExitVtMode();
+			}
 			gDetVtRequested = 0;
+			// enable comms interrupt
+			NVIC_EnableIRQ(OTG_HS_IRQn);
 		}
-		// enable comms interrupt
-		NVIC_EnableIRQ(OTG_HS_IRQn);
 
 		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 	}
