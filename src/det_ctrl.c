@@ -303,10 +303,10 @@ void DetCmdCountBitsKPage(uint32_t address, uint8_t *countBlock)
 void DetCmdProgramSector(uint32_t address, uint16_t word)
 {
 	//uint32_t usdelay = 2 << gDetInfo.CfiInterface.TypTimeSingleWordWrite;
-	for (uint32_t i=0; i<4096; i++)
+	for (uint32_t i=0; i<2048; i++)
 	{
-		for (uint32_t j=0; j<8; j++) {
-			gDetApi->ProgramWord(address + 8*i + j, word);
+		for (uint32_t j=0; j<32; j++) {
+			gDetApi->ProgramWord(address + 32*i + j, word);
 			HAL_Delay(1);
 		}
 		/*gDetApi->ProgramBuffer_single(address + 16*i, word, 16);
