@@ -21,7 +21,7 @@ UART_HandleTypeDef huart3;
 TIM_HandleTypeDef  htim12;
 TIM_HandleTypeDef  htim13;
 
-int gMainLoopSemaphore;
+volatile int gMainLoopSemaphore;
 // TODO: Move this to a header?
 uint32_t g_config_save_requested;
 

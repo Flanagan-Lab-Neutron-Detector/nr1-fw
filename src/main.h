@@ -17,7 +17,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* Exported variables --------------------------------------------------------*/
-extern int gMainLoopSemaphore; // Set by tim13 isr, reset in main loop
+extern volatile int gMainLoopSemaphore; // Set by tim13 isr, reset in main loop
 
 /* Private defines -----------------------------------------------------------*/
 #define B1_Pin GPIO_PIN_13
