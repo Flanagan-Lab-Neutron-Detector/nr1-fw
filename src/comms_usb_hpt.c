@@ -76,18 +76,19 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
 
 	int iserr = 0;
 
-	if (isVt)
-	{
+	if (isVt) {
 		iserr |= DetEnterVtMode();
 		iserr |= DetSetVt(vtMv);
+	} else {
+		iserr |= DetExitVtMode();
 	}
 
 	gDetApi->ReadBlock(addr, 512, rsp->ReadDataRsp.Data);
 
-	if (isVt)
+	/*if (isVt)
 	{
 		iserr |= DetExitVtMode();
-	}
+	}*/
 
 	if (iserr) {
 		rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
@@ -111,10 +112,11 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_ComMsg *rsp)
 	uint32_t vtMv = cmd->BitReadMv;
 	uint32_t addr = cmd->WordAddress;
 
-	if (isVt)
-	{
+	if (isVt) {
 		DetEnterVtMode();
 		DetSetVt(vtMv);
+	} else {
+		DetExitVtMode();
 	}
 
 	uint16_t word = gDetApi->ReadWord(addr);
@@ -122,10 +124,10 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_ComMsg *rsp)
 	rsp->ReadWordRsp.Word = word;
 	rsp->ReadWordRsp._Pad[0] = 0;
 
-	if (isVt)
+	/*if (isVt)
 	{
 		DetExitVtMode();
-	}
+	}*/
 
 	rsp->CmdRsp = HPT_READ_WORD_RSP;
 	rsp->Length += sizeof(HPT_ReadWordRsp);
