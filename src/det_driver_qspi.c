@@ -112,8 +112,44 @@ void QSPI_ReadWords(uint32_t *addrs, uint16_t *dest, uint32_t count)
 
 void QSPI_ReadBlock(uint32_t base, uint32_t count, uint16_t *dest)
 {
+	//for (uint32_t i=0; i<count; i++)
+	//	dest[i] = QSPI_ReadWord(base + i);
+
+	OSPI_RegularCmdTypeDef cmd = {
+		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
+		.FlashId               = HAL_OSPI_FLASH_ID_1,
+		.Instruction           = 0x0B,
+		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
+		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
+		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
+		.Address               = base,
+		.AddressMode           = HAL_OSPI_ADDRESS_4_LINES,
+		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
+		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
+		.AlternateBytes        = 0,
+		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
+		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
+		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
+		.DataMode              = HAL_OSPI_DATA_4_LINES,
+		.NbData                = 2 * count,
+		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
+		.DummyCycles           = 20,
+		.DQSMode               = HAL_OSPI_DQS_DISABLE,
+		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
+	};
+
+	HAL_StatusTypeDef status;
+	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
+	if (status != HAL_OK) Error_Handler();
+
+	uint16_t data = 0;
+	status = HAL_OSPI_Receive(&hospi1, (uint8_t*)dest, HAL_MAX_DELAY);
+	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
+	if (status != HAL_OK) Error_Handler();
+
+	// OSPI shifts in little-endian but we need big-endian
 	for (uint32_t i=0; i<count; i++)
-		dest[i] = QSPI_ReadWord(base + i);
+		dest[i] = ((dest[i] & 0x00FF) << 8) | ((dest[i] & 0xFF00) >> 8);
 }
 
 void QSPI_ReadPage(uint32_t PageAddress, uint16_t *dest)

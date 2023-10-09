@@ -185,33 +185,27 @@ void DetReadIdCfiData(S_DeviceInformation *detInfo, uint32_t SectorAddress)
 //	// ID entry
 //	Det_WriteWords(IdEntryAddrs, IdEntryWords, 3);
 
-	gDetApi->WriteCommandWord(SectorAddress + 0xAA, 0x98);
+	gDetApi->WriteCommandWord(SectorAddress + 0x55, 0x98);
 
-#define BYTE_READ(A, C, DST) for (uint32_t i=0; i<(C); i++) { *(((uint8_t*)(DST) + 2*i)) = (uint8_t)gDetApi->ReadWord((A) + i); }
 
 	// Read ID/Autoselect entry
 	//gDetApi->ReadBlock(SectorAddress + 0x0000, 16, &detInfo->ID.ManufacturerID);
 	//BYTE_READ(SectorAddress + 0x0000, 16, &detInfo->ID);
 
 	// Read CFI Query Identification String
-	//gDetApi->ReadBlock(SectorAddress + (0x0010<<1), 11, &detInfo->CfiQuery.Q);
-	BYTE_READ(SectorAddress + (0x0010), 11, &detInfo->CfiQuery);
+	gDetApi->ReadBlock(SectorAddress + 0x0010, 11, (uint16_t*)&detInfo->CfiQuery);
 
 	// Read CFI System Interface String
-	//gDetApi->ReadBlock(SectorAddress + (0x001B<<1), 12, &detInfo->CfiInterface.VccMin);
-	BYTE_READ(SectorAddress + (0x001B), 12, &detInfo->CfiInterface);
+	gDetApi->ReadBlock(SectorAddress + 0x001B, 12, (uint16_t*)&detInfo->CfiInterface);
 
 	// Read CFI Device Geometry String
-	//gDetApi->ReadBlock(SectorAddress + (0x0027<<1), 25, &detInfo->CfiGeo.Size);
-	BYTE_READ(SectorAddress + (0x0027), 25, &detInfo->CfiGeo);
+	gDetApi->ReadBlock(SectorAddress + 0x0027, 25, (uint16_t*)&detInfo->CfiGeo);
 
 	// Read CFI Primary Vendor-Specific Extended Query
-	//gDetApi->ReadBlock(SectorAddress + (0x0040<<1), 62, &detInfo->CfiExtQuery.P);
-	BYTE_READ(SectorAddress + (0x0040), 62, &detInfo->CfiExtQuery);
+	gDetApi->ReadBlock(SectorAddress + 0x0040, 62, (uint16_t*)&detInfo->CfiExtQuery);
 
 	// Read ID-CFI ASO Map
-	//gDetApi->ReadBlock(SectorAddress + (0x0080<<1), sizeof(detInfo->IdCfiAsoMap)/2, &detInfo->IdCfiAsoMap.ElectronicMarkingSize);
-	BYTE_READ(SectorAddress + (0x0080), sizeof(detInfo->IdCfiAsoMap)/2, &detInfo->IdCfiAsoMap);
+	gDetApi->ReadBlock(SectorAddress + 0x0080, sizeof(detInfo->IdCfiAsoMap)/2, (uint16_t*)&detInfo->IdCfiAsoMap);
 
 #undef BYTE_READ
 
