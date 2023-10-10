@@ -83,7 +83,14 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
 		iserr |= DetExitVtMode();
 	}
 
-	gDetApi->ReadBlock(addr, 512, rsp->ReadDataRsp.Data);
+	// The last 512-word chunk of each sector may read garbage when ReadBlock is used
+	// Use ReadWord and a loop for the last chunk
+	if (addr % 0x10000 >= 0x0FE00) {
+		for (uint32_t i=0; i<512; i++)
+			rsp->ReadDataRsp.Data[i] = gDetApi->ReadWord(addr + i);
+	} else {
+		gDetApi->ReadBlock(addr, 512, rsp->ReadDataRsp.Data);
+	}
 
 	/*if (isVt)
 	{
