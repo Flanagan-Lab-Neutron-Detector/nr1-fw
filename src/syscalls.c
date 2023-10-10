@@ -40,10 +40,10 @@ void *_sbrk(int incr)
 		heap = (unsigned char *)&_heap_start;
 	}
 
-	unsigned char *stack = (unsigned char *)__get_MSP();
-	if ((intptr_t)(heap + incr) > (intptr_t)stack) {
+	unsigned char *heap_end = (unsigned char *)&_heap_end;
+	if ((intptr_t)(heap + incr) > (intptr_t)heap_end) {
 #ifdef DEBUG
-		_write(STDERR_FILENO, "[_sbrk] Error: Requested increment collides with stack.\n", 57);
+		_write(STDERR_FILENO, "[_sbrk] Error: Requested increment exceeds heap memory.\n", 57);
 #endif // DEBUG
 		errno = ENOMEM;
 		return (void*)-1;
