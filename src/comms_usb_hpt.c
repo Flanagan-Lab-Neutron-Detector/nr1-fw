@@ -23,9 +23,9 @@ extern CRC_HandleTypeDef hcrc;
  * @brief Global scratch response buffer
  *
  */
-static HPT_ComMsg g_msg_rsp;
+static HPT_MsgRsp g_msg_rsp;
 
-static HPT_ComMsg m_cmd_copy; // copy for slow processing (outside of interrupt)
+static HPT_MsgCmd m_cmd_copy; // copy for slow processing (outside of interrupt)
 
 void comms_usb_hpt_reset(void)
 {
@@ -40,7 +40,7 @@ void comms_usb_hpt_reset(void)
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_vt_get_bit_count_kpage_cmd(HPT_VtGetBitCountKPageCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_vt_get_bit_count_kpage_cmd(HPT_VtGetBitCountKPageCmd *cmd, HPT_MsgRsp *rsp)
 {
 	UNUSED(cmd);
 	rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
@@ -54,7 +54,7 @@ void comms_hpt_handle_vt_get_bit_count_kpage_cmd(HPT_VtGetBitCountKPageCmd *cmd,
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_get_sector_bit_count_cmd(HPT_GetSectorBitCountCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_get_sector_bit_count_cmd(HPT_GetSectorBitCountCmd *cmd, HPT_MsgRsp *rsp)
 {
 	UNUSED(cmd);
 	rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
@@ -68,7 +68,7 @@ void comms_hpt_handle_get_sector_bit_count_cmd(HPT_GetSectorBitCountCmd *cmd, HP
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_MsgRsp *rsp)
 {
 	uint32_t isVt = cmd->VtMode;
 	uint32_t vtMv = cmd->BitReadMv;
@@ -113,7 +113,7 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_ComMsg *rsp)
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_MsgRsp *rsp)
 {
 	uint32_t isVt = cmd->VtMode;
 	uint32_t vtMv = cmd->BitReadMv;
@@ -150,7 +150,7 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_ComMsg *rsp)
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_MsgRsp *rsp)
 {
 	switch (cmd->AnalogUnit)
 	{
@@ -182,7 +182,7 @@ void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_ComMsg
  * @param cmd Command
  * @param rsp Response
  */
-void comms_hpt_handle_ana_set_active_counts(HPT_AnaSetActiveCountsCmd *cmd, HPT_ComMsg *rsp)
+void comms_hpt_handle_ana_set_active_counts(HPT_AnaSetActiveCountsCmd *cmd, HPT_MsgRsp *rsp)
 {
 	switch (cmd->AnalogUnit)
 	{
@@ -214,14 +214,14 @@ void comms_hpt_handle_ana_set_active_counts(HPT_AnaSetActiveCountsCmd *cmd, HPT_
  * @param msg Incoming HPT Bus message
  * @return uint32_t Length of response. Zero indicates no response.
  */
-uint32_t comms_usb_hpt_receive_msg(HPT_ComMsg *msg)
+uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 {
 
 // Dispatch a long message for further processing, if detector is available
 #define COMMS_CHECK_DISPATCH(M) do { \
 	if (g_comms_cmd_req == HPT_NULL_MSG_CMD) { \
 		g_msg_rsp.CmdRsp = M##_RSP; \
-		memcpy(&m_cmd_copy, msg, sizeof(HPT_ComMsg)); \
+		memcpy(&m_cmd_copy, msg, sizeof(HPT_MsgCmd)); \
 		g_comms_cmd_req = M##_CMD; \
 	} else { g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP; } \
 } while (0)
@@ -334,7 +334,7 @@ void comms_usb_hpt_receive_bytes(uint8_t *bytes, uint32_t nbytes, void **send_da
 			if (total_crc == 0)
 			{
 				// re-interpret as command
-				HPT_ComMsg *ptr_msg = (HPT_ComMsg*)bytes;
+				HPT_MsgCmd *ptr_msg = (HPT_MsgCmd*)bytes;
 				comms_usb_hpt_receive_msg(ptr_msg);
 				// comms_usb_hpt_receive_msg fills out g_msg_rsp
 				if (g_msg_rsp.Length != 0) {

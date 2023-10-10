@@ -65,7 +65,8 @@ typedef enum __attribute__((__packed__))
 	HPT_CMD_RSP_LENGTH				= 0xFF,			// defines 1 byte for this enum (IAR) TODO: Does this work in GCC?
 } HPT_CmdRespEnum;
 
-#define		HPT_MAX_PAYLOAD		    1088
+#define		HPT_MAX_CMD_PAYLOAD		    1088		// 1024 + 64
+#define		HPT_MAX_RSP_PAYLOAD		    4160		// 4096 + 64
 
 /////////////////////  COMMANDS  ////////////////////////
 
@@ -179,7 +180,7 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 /////////////////////  UNION OF ALL COMMANDS  ////////////////////////
 
 /**
- * @brief HPT Bus message command/response structure
+ * @brief HPT Bus message command structure
  *
  * Holds header and union of all payloads. CRC is placed after
  * the message payload, at RawData32Bit[(Length-4)/4].
@@ -187,8 +188,43 @@ typedef __PACKED_STRUCT __ALIGNED(4)
  */
 typedef __PACKED_UNION __ALIGNED(4)
 {
-	uint8_t					    RawData[64 + HPT_MAX_PAYLOAD];
-    uint32_t                    RawData32Bit[(64 + HPT_MAX_PAYLOAD)/4];
+	uint8_t					    RawData[64 + HPT_MAX_CMD_PAYLOAD];
+    uint32_t                    RawData32Bit[(64 + HPT_MAX_CMD_PAYLOAD)/4];
+
+	__PACKED_STRUCT __ALIGNED(4) {
+		uint8_t StartChar; uint16_t Length; HPT_CmdRespEnum CmdRsp;  // header data 4 bytes
+
+		union __ALIGNED(4)
+		{
+			HPT_VtGetBitCountKPageCmd	VtGetBitCountKPageCmd;
+			HPT_EraseSectorCmd			EraseSectorCmd;
+			HPT_ProgramSectorCmd		ProgramSectorCmd;
+			HPT_ProgramChipCmd			ProgramChipCmd;
+			HPT_GetSectorBitCountCmd	GetSectorBitCountCmd;
+			HPT_ReadDataCmd				ReadDataCmd;
+			HPT_WriteDataCmd			WriteDataCmd;
+			HPT_ReadWordCmd				ReadWordCmd;
+
+			HPT_AnaGetCalCountsCmd		AnaGetCalCountsCmd;
+			HPT_AnaSetCalCountsCmd		AnaSetCalCountsCmd;
+			HPT_AnaSetActiveCountsCmd	AnaSetActiveCountsCmd;
+
+			HPT_NoDataCmdRsp            NoDataCmdRsp;
+		};
+	};
+} HPT_MsgCmd;
+
+/**
+ * @brief HPT Bus message response structure
+ *
+ * Holds header and union of all response payloads. CRC is placed after
+ * the message payload, at RawData32Bit[(Length-4)/4].
+ *
+ */
+typedef __PACKED_UNION __ALIGNED(4)
+{
+	uint8_t					    RawData[64 + HPT_MAX_RSP_PAYLOAD];
+    uint32_t                    RawData32Bit[(64 + HPT_MAX_RSP_PAYLOAD)/4];
 
 	__PACKED_STRUCT __ALIGNED(4) {
 		uint8_t StartChar; uint16_t Length; HPT_CmdRespEnum CmdRsp;  // header data 4 bytes
@@ -196,50 +232,43 @@ typedef __PACKED_UNION __ALIGNED(4)
 		union __ALIGNED(4)
 		{
 			HPT_PingRsp					PingRsp;
-			HPT_VtGetBitCountKPageCmd	VtGetBitCountKPageCmd;
 			HPT_VtGetBitCountKPageRsp	VtGetBitCountKPageRsp;
-			HPT_EraseSectorCmd			EraseSectorCmd;
-			HPT_ProgramSectorCmd		ProgramSectorCmd;
-			HPT_ProgramChipCmd			ProgramChipCmd;
-			HPT_GetSectorBitCountCmd	GetSectorBitCountCmd;
 			HPT_GetSectorBitCountRsp	GetSectorBitCountRsp;
-			HPT_ReadDataCmd				ReadDataCmd;
 			HPT_ReadDataRsp				ReadDataRsp;
-			HPT_WriteDataCmd			WriteDataCmd;
-			HPT_ReadWordCmd				ReadWordCmd;
 			HPT_ReadWordRsp				ReadWordRsp;
-
-			HPT_AnaGetCalCountsCmd		AnaGetCalCountsCmd;
 			HPT_AnaGetCalCountsRsp		AnaGetCalCountsRsp;
-			HPT_AnaSetCalCountsCmd		AnaSetCalCountsCmd;
-			HPT_AnaSetActiveCountsCmd	AnaSetActiveCountsCmd;
-
 			HPT_NoDataCmdRsp            NoDataCmdRsp;
 		};
 	};
-} HPT_ComMsg;
+} HPT_MsgRsp;
 
 #include <assert.h>
 #include <stddef.h>
 
-static_assert(sizeof(HPT_ComMsg) == 64 + HPT_MAX_PAYLOAD, "HPT_ComMsg wrong size :(");
-static_assert(offsetof(HPT_ComMsg, PingRsp) == 4, "PingRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, VtGetBitCountKPageCmd) == 4, "VtGetBitCountKPageCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, VtGetBitCountKPageRsp) == 4, "VtGetBitCountKPageRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, EraseSectorCmd) == 4, "EraseSectorCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ProgramSectorCmd) == 4, "ProgramSectorCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ProgramChipCmd) == 4, "ProgramChipCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, GetSectorBitCountCmd) == 4, "PingRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, GetSectorBitCountRsp) == 4, "GetSectorBitCountRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ReadDataCmd) == 4, "ReadDataCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ReadDataRsp) == 4, "ReadDataRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, WriteDataCmd) == 4, "WriteDataCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ReadWordCmd) == 4, "ReadWordCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, ReadWordRsp) == 4, "ReadWordRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, AnaGetCalCountsRsp) == 4, "AnaGetCalCountsRsp is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, AnaSetCalCountsCmd) == 4, "AnaSetCalCountsCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, AnaSetActiveCountsCmd) == 4, "AnaSetActiveCountsCmd is not at offset 4");
-static_assert(offsetof(HPT_ComMsg, NoDataCmdRsp) == 4, "NoDataCmdRsp is not at offset 4");
+static_assert(sizeof(HPT_MsgCmd) == 64 + HPT_MAX_CMD_PAYLOAD, "HPT_MsgCmd wrong size :(");
+static_assert(sizeof(HPT_MsgRsp) == 64 + HPT_MAX_RSP_PAYLOAD, "HPT_MsgRsp wrong size :(");
+
+// commands must immediately follow header
+static_assert(offsetof(HPT_MsgCmd, VtGetBitCountKPageCmd) == 4, "VtGetBitCountKPageCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, EraseSectorCmd)        == 4, "EraseSectorCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, ProgramSectorCmd)      == 4, "ProgramSectorCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, ProgramChipCmd)        == 4, "ProgramChipCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, GetSectorBitCountCmd)  == 4, "GetSectorBitCountCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, ReadDataCmd)           == 4, "ReadDataCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, WriteDataCmd)          == 4, "WriteDataCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, ReadWordCmd)           == 4, "ReadWordCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, AnaSetCalCountsCmd)    == 4, "AnaSetCalCountsCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, AnaSetActiveCountsCmd) == 4, "AnaSetActiveCountsCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, NoDataCmdRsp)          == 4, "NoDataCmdRsp is not at offset 4");
+
+// responses must immediately follow header
+static_assert(offsetof(HPT_MsgRsp, PingRsp)               == 4, "PingRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, VtGetBitCountKPageRsp) == 4, "VtGetBitCountKPageRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, GetSectorBitCountRsp)  == 4, "GetSectorBitCountRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, ReadDataRsp)           == 4, "ReadDataRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, ReadWordRsp)           == 4, "ReadWordRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, AnaGetCalCountsRsp)    == 4, "AnaGetCalCountsRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, NoDataCmdRsp)          == 4, "NoDataCmdRsp is not at offset 4");
 
 #if defined(__cplusplus)
 }
