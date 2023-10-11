@@ -60,6 +60,37 @@ void comms_hpt_handle_get_sector_bit_count_cmd(HPT_GetSectorBitCountCmd *cmd, HP
 	rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
 }
 
+static void read_data(uint32_t addr, uint16_t *data, uint32_t count)
+{
+	// The last 512-word chunk of each sector may read garbage when ReadBlock is used.
+	// Use ReadWords for addresses in [0xFE00, 0x10000) and ReadBlock otherwise.
+
+	uint32_t sector_offset = addr & 0xFFFF;
+	
+	if (sector_offset + count < 0xFE00) {
+		gDetApi->ReadBlock(addr, count, data);
+	} else {
+		// Block 0 is addr up to the last 512-word chunk of the sector
+		// Block 1 is the last 512-word chunk of the sector
+		// Block 2 is the remaining data in the next sector
+		// Block 0 and Block 2 may be empty. Block 1 may be partial.
+		uint32_t block0_addr  = addr;
+		int32_t  block0_count = sector_offset         < 0xFE00  ? 0xFE00  - sector_offset : 0; //MAX(0xFE00 - sector_offset, 0);
+		uint32_t block1_addr  = block0_addr + block0_count; // = sector + 0xFE00
+		int32_t  block1_count = sector_offset         > 0xFE00  ? 0x10000 - sector_offset : (
+		                        sector_offset + count < 0x10000 ? count   - block0_count  : 512); //MIN(count - block0_count, 512);	
+		uint32_t block2_addr  = block1_addr + block1_count; // = sector + 0x10000
+		int32_t  block2_count = count - block0_count - block1_count;
+
+		if (block0_count > 0)
+			gDetApi->ReadBlock(block0_addr, block0_count, data);
+		for (int32_t i = 0; i < block1_count; i++)
+			data[block0_count + i] = gDetApi->ReadWord(block1_addr + i);
+		if (block2_count > 0)
+			gDetApi->ReadBlock(block2_addr, block2_count, data + block0_count + block1_count);
+	}
+}
+
 /**
  * @brief Handle data read with voltage request
  *
@@ -83,14 +114,14 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_MsgRsp *rsp)
 		iserr |= DetExitVtMode();
 	}
 
-	// The last 512-word chunk of each sector may read garbage when ReadBlock is used
-	// Use ReadWord and a loop for the last chunk
-	if (addr % 0x10000 >= 0x0FE00) {
-		for (uint32_t i=0; i<512; i++)
-			rsp->ReadDataRsp.Data[i] = gDetApi->ReadWord(addr + i);
-	} else {
-		gDetApi->ReadBlock(addr, 512, rsp->ReadDataRsp.Data);
-	}
+	// Cap at words in response buffer
+	uint32_t count_max = sizeof(rsp->ReadDataRsp.Data) / sizeof(uint16_t);
+	uint32_t count = cmd->NumWords > count_max ? count_max : cmd->NumWords;
+
+	// The last 512-word chunk of each sector may read garbage when ReadBlock is used.
+	// Use ReadWords for addresses in [0xFE00, 0x10000) and ReadBlock otherwise.
+	if (count > 0)
+		read_data(addr, rsp->ReadDataRsp.Data, count);
 
 	/*if (isVt)
 	{
@@ -101,7 +132,7 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_MsgRsp *rsp)
 		rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
 	} else {
 		rsp->CmdRsp = HPT_READ_DATA_RSP;
-		rsp->Length += sizeof(HPT_ReadDataRsp);
+		rsp->Length += 2*(count + count % 2); // round up to nearest 4-byte boundary
 	}
 }
 

@@ -121,11 +121,12 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 	uint32_t		BaseAddress;
 	uint32_t		VtMode;					// true = read in Vt mode, else read normally
 	uint32_t		BitReadMv;				// if VtMode, read voltage in mV
+	uint32_t		NumWords;				// how many words to read
 } HPT_ReadDataCmd;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
-	uint16_t		Data[512];
+	uint16_t		Data[2048];
 } HPT_ReadDataRsp;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
