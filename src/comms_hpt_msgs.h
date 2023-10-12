@@ -68,11 +68,56 @@ typedef enum __attribute__((__packed__))
 #define		HPT_MAX_CMD_PAYLOAD		    1088		// 1024 + 64
 #define		HPT_MAX_RSP_PAYLOAD		    4160		// 4096 + 64
 
+/////////////////////  FAILURE CODES  ////////////////////////
+
+typedef enum __attribute((__packed__))
+{
+	HPT_FAILURE_CLASS_NONE = 0,
+
+	HPT_FAILURE_CLASS_CMD     = 1,					// command failure
+	HPT_FAILURE_CLASS_ANALOG  = 2,					// analog failure
+
+	HPT_FAILURE_CLASS_LENGTH = 0xFFFF 				// defines 2 bytes for this enum (IAR) TODO: Does this work in GCC?
+} HPT_FailureClass;
+
+typedef enum __attribute((__packed__))
+{
+	HPT_FAILURE_CMD_UNIMPLEMENTED = 1, 				// command not implemented
+	HPT_FAILURE_CMD_BUSY          = 2, 				// command already in progress
+	HPT_FAILURE_CMD_INVALID_PARAM = 3, 				// invalid parameter
+
+	HPT_FAILURE_CMD_LENGTH = 0xFFFF,				// defines 2 bytes for this enum (IAR) TODO: Does this work in GCC?
+} HPT_FailureClassCmd;
+
+typedef enum __attribute((__packed__))
+{
+	HPT_FAILURE_ANA_DAC_ERR = 1,					// DAC error
+
+	HPT_FAILURE_ANA_LENGTH = 0xFFFF,				// defines 2 bytes for this enum (IAR) TODO: Does this work in GCC?
+} HPT_FailureClassAnalog;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint16_t		Class;   // Class of failure
+	uint16_t		Failure; // Specific failure
+} HPT_FailureCode;
+
+#define HPT_FAILURE_CODE_CMD_UNIMPLEMENTED (HPT_FailureCode){.Class = HPT_FAILURE_CLASS_CMD, .Failure = HPT_FAILURE_CMD_UNIMPLEMENTED}
+#define HPT_FAILURE_CODE_CMD_BUSY          (HPT_FailureCode){.Class = HPT_FAILURE_CLASS_CMD, .Failure = HPT_FAILURE_CMD_BUSY}
+#define HPT_FAILURE_CODE_CMD_INVALID_PARAM (HPT_FailureCode){.Class = HPT_FAILURE_CLASS_CMD, .Failure = HPT_FAILURE_CMD_INVALID_PARAM}
+#define HPT_FAILURE_CODE_ANA_DAC_ERR       (HPT_FailureCode){.Class = HPT_FAILURE_CLASS_ANALOG, .Failure = HPT_FAILURE_ANA_DAC_ERR}
+
 /////////////////////  COMMANDS  ////////////////////////
 
 typedef __PACKED_STRUCT
 {
 } HPT_NoDataCmdRsp;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		Failures;
+	HPT_FailureCode FailureCodes[1023];
+} HPT_FailureRsp;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
@@ -232,6 +277,7 @@ typedef __PACKED_UNION __ALIGNED(4)
 
 		union __ALIGNED(4)
 		{
+			HPT_FailureRsp				FailureRsp;
 			HPT_PingRsp					PingRsp;
 			HPT_VtGetBitCountKPageRsp	VtGetBitCountKPageRsp;
 			HPT_GetSectorBitCountRsp	GetSectorBitCountRsp;
@@ -243,11 +289,15 @@ typedef __PACKED_UNION __ALIGNED(4)
 	};
 } HPT_MsgRsp;
 
+/////////////////////  STATIC ASSERTIONS  ////////////////////////
+
 #include <assert.h>
 #include <stddef.h>
 
-static_assert(sizeof(HPT_MsgCmd) == 64 + HPT_MAX_CMD_PAYLOAD, "HPT_MsgCmd wrong size :(");
-static_assert(sizeof(HPT_MsgRsp) == 64 + HPT_MAX_RSP_PAYLOAD, "HPT_MsgRsp wrong size :(");
+static_assert(sizeof(HPT_CmdRespEnum) == 1, "HPT_CmdRespEnum wrong size");
+static_assert(sizeof(HPT_FailureCode) == 4, "HPT_FailureCode wrong size");
+static_assert(sizeof(HPT_MsgCmd)      == 64 + HPT_MAX_CMD_PAYLOAD, "HPT_MsgCmd wrong size :(");
+static_assert(sizeof(HPT_MsgRsp)      == 64 + HPT_MAX_RSP_PAYLOAD, "HPT_MsgRsp wrong size :(");
 
 // commands must immediately follow header
 static_assert(offsetof(HPT_MsgCmd, VtGetBitCountKPageCmd) == 4, "VtGetBitCountKPageCmd is not at offset 4");
@@ -263,6 +313,7 @@ static_assert(offsetof(HPT_MsgCmd, AnaSetActiveCountsCmd) == 4, "AnaSetActiveCou
 static_assert(offsetof(HPT_MsgCmd, NoDataCmdRsp)          == 4, "NoDataCmdRsp is not at offset 4");
 
 // responses must immediately follow header
+static_assert(offsetof(HPT_MsgRsp, FailureRsp)            == 4, "FailureRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, PingRsp)               == 4, "PingRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, VtGetBitCountKPageRsp) == 4, "VtGetBitCountKPageRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, GetSectorBitCountRsp)  == 4, "GetSectorBitCountRsp is not at offset 4");

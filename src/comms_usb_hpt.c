@@ -44,6 +44,8 @@ void comms_hpt_handle_vt_get_bit_count_kpage_cmd(HPT_VtGetBitCountKPageCmd *cmd,
 {
 	UNUSED(cmd);
 	rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+	rsp->FailureRsp.FailureCodes[rsp->FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_UNIMPLEMENTED;
+	rsp->FailureRsp.Failures++;
 }
 
 /**
@@ -58,6 +60,8 @@ void comms_hpt_handle_get_sector_bit_count_cmd(HPT_GetSectorBitCountCmd *cmd, HP
 {
 	UNUSED(cmd);
 	rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+	rsp->FailureRsp.FailureCodes[rsp->FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_UNIMPLEMENTED;
+	rsp->FailureRsp.Failures++;
 }
 
 static void read_data(uint32_t addr, uint16_t *data, uint32_t count)
@@ -130,6 +134,8 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_MsgRsp *rsp)
 
 	if (iserr) {
 		rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+		rsp->FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_ANA_DAC_ERR;
+		rsp->FailureRsp.Failures++;
 	} else {
 		rsp->CmdRsp = HPT_READ_DATA_RSP;
 		rsp->Length += 2*(count + count % 2); // round up to nearest 4-byte boundary
@@ -199,6 +205,8 @@ void comms_hpt_handle_ana_set_cal_counts(HPT_AnaSetCalCountsCmd *cmd, HPT_MsgRsp
 			break;
 		default:
 			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+			rsp->FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_INVALID_PARAM;
+			rsp->FailureRsp.Failures++;
 			break;
 	}
 }
@@ -227,6 +235,8 @@ void comms_hpt_handle_ana_set_active_counts(HPT_AnaSetActiveCountsCmd *cmd, HPT_
 			break;
 		default:
 			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+			rsp->FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_INVALID_PARAM;
+			rsp->FailureRsp.Failures++;
 			break;
 	}
 }
@@ -254,7 +264,9 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 		g_msg_rsp.CmdRsp = M##_RSP; \
 		memcpy(&m_cmd_copy, msg, sizeof(HPT_MsgCmd)); \
 		g_comms_cmd_req = M##_CMD; \
-	} else { g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP; } \
+	} else { g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP; \
+			g_msg_rsp.FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_BUSY; \
+			g_msg_rsp.FailureRsp.Failures++; } \
 } while (0)
 
 	puts("Received message");
@@ -265,6 +277,8 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 	g_msg_rsp.StartChar = HPT_MSG_SOM_CHAR;
 	g_msg_rsp.CmdRsp = HPT_UNKNOWN_COMMAND_RSP;
 	g_msg_rsp.Length = HPT_SIZE_OF_HEADER + HPT_SIZE_OF_CRC;
+	// Start FailureRsp.Failures at 0 so failures can be appended
+	g_msg_rsp.FailureRsp.Failures = 0;
 
 	if (cmd == HPT_PING_CMD) {
 		g_msg_rsp.Length += sizeof(HPT_PingRsp);
@@ -302,6 +316,8 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 	} else if (g_comms_cmd_req != HPT_NULL_MSG_CMD) {
 		// Command in progress
 		g_msg_rsp.CmdRsp = HPT_FAILED_COMMAND_RSP;
+		g_msg_rsp.FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_BUSY;
+		g_msg_rsp.FailureRsp.Failures++;
 	} else {
 		switch (cmd) {
 			case HPT_VT_GET_BIT_COUNT_KPAGE_CMD:
@@ -342,6 +358,11 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 				g_msg_rsp.CmdRsp = HPT_UNKNOWN_COMMAND_RSP;
 				break;
 		}
+	}
+
+	if (g_msg_rsp.CmdRsp == HPT_FAILED_COMMAND_RSP) {
+		g_msg_rsp.Length += sizeof(g_msg_rsp.FailureRsp.Failures);
+		g_msg_rsp.Length += sizeof(HPT_FailureCode) * g_msg_rsp.FailureRsp.Failures;
 	}
 
 	if (g_msg_rsp.Length != 0) {
