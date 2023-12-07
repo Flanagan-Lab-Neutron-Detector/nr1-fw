@@ -76,6 +76,11 @@ DacError DacWriteOutput(uint32_t unit, uint32_t counts)
     if (dac_err_state == GPIO_PIN_SET)
         return DAC_ERR_HW;
 
+    GPIO_PinState dac_ack_state = HAL_GPIO_ReadPin(ANA_ACK_GPIO_Port, ANA_ACK_Pin);
+    while (dac_ack_state == GPIO_PIN_SET) // TODO: timeout
+        dac_ack_state = HAL_GPIO_ReadPin(ANA_ACK_GPIO_Port, ANA_ACK_Pin);
+        //return DAC_ERR_NOT_READY;
+
     if (unit == 1 || unit == 2) {
         HAL_StatusTypeDef status = dac_send(unit, counts);
         if (status == HAL_TIMEOUT)
@@ -85,6 +90,12 @@ DacError DacWriteOutput(uint32_t unit, uint32_t counts)
     } else {
         ret = DAC_ERR_INVALID_CHANNEL;
     }
+
+    dac_ack_state = HAL_GPIO_ReadPin(ANA_ACK_GPIO_Port, ANA_ACK_Pin);
+    while (dac_ack_state == GPIO_PIN_RESET) // TODO: timeout
+        dac_ack_state = HAL_GPIO_ReadPin(ANA_ACK_GPIO_Port, ANA_ACK_Pin);
+    //if (dac_ack_state == GPIO_PIN_RESET)
+    //    return DAC_ERR_NACK;
 
     if (ret == DAC_SUCCESS) {
         if (unit == 1) {

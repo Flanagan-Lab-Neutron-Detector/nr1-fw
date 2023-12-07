@@ -32,7 +32,9 @@ typedef enum {
     DAC_ERR_TIMEOUT, // Timeout while writing to DAC
     DAC_ERR_HW,      // DAC hardware error
     DAC_ERR_SPI,     // SPI error
-    DAC_ERR_INVALID_CHANNEL // Invalid DAC channel
+    DAC_ERR_INVALID_CHANNEL, // Invalid DAC channel
+    DAC_ERR_NOT_READY, // DAC not ready
+    DAC_ERR_NACK     // DAC did not acknowledge
 } DacError;
 
 extern DacError DacInit(float Dac1CalC0, float Dac1CalC1, float Dac2CalC0, float Dac2CalC1);
