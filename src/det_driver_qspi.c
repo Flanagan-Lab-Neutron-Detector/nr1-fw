@@ -49,7 +49,7 @@ uint16_t QSPI_ReadWord(uint32_t addr)
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
 		.Instruction           = 0x0B,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
+		.InstructionMode       = HAL_OSPI_INSTRUCTION_4_LINES,
 		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
 		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
 		.Address               = addr,
@@ -112,44 +112,8 @@ void QSPI_ReadWords(uint32_t *addrs, uint16_t *dest, uint32_t count)
 
 void QSPI_ReadBlock(uint32_t base, uint32_t count, uint16_t *dest)
 {
-	//for (uint32_t i=0; i<count; i++)
-	//	dest[i] = QSPI_ReadWord(base + i);
-
-	OSPI_RegularCmdTypeDef cmd = {
-		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
-		.FlashId               = HAL_OSPI_FLASH_ID_1,
-		.Instruction           = 0x0B,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
-		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
-		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
-		.Address               = base,
-		.AddressMode           = HAL_OSPI_ADDRESS_4_LINES,
-		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
-		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
-		.AlternateBytes        = 0,
-		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
-		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
-		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
-		.DataMode              = HAL_OSPI_DATA_4_LINES,
-		.NbData                = 2 * count,
-		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
-		.DummyCycles           = 20,
-		.DQSMode               = HAL_OSPI_DQS_DISABLE,
-		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
-	};
-
-	HAL_StatusTypeDef status;
-	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
-	if (status != HAL_OK) Error_Handler();
-
-	uint16_t data = 0;
-	status = HAL_OSPI_Receive(&hospi1, (uint8_t*)dest, HAL_MAX_DELAY);
-	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
-	if (status != HAL_OK) Error_Handler();
-
-	// OSPI shifts in little-endian but we need big-endian
 	for (uint32_t i=0; i<count; i++)
-		dest[i] = ((dest[i] & 0x00FF) << 8) | ((dest[i] & 0xFF00) >> 8);
+		dest[i] = QSPI_ReadWord(base + i);
 }
 
 void QSPI_ReadPage(uint32_t PageAddress, uint16_t *dest)
@@ -164,7 +128,7 @@ void QSPI_WriteWord(uint32_t addr, uint16_t word) {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
 		.Instruction           = 0xF8,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
+		.InstructionMode       = HAL_OSPI_INSTRUCTION_4_LINES,
 		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
 		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
 		.Address               = addr,
@@ -206,35 +170,9 @@ void QSPI_WriteBlock(uint32_t base, uint32_t count, uint16_t *block)
 
 void QSPI_ProgramWord(uint32_t Address, uint16_t word)
 {
-	OSPI_RegularCmdTypeDef cmd = {
-		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
-		.FlashId               = HAL_OSPI_FLASH_ID_1,
-		.Instruction           = 0xF2,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
-		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
-		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
-		.Address               = Address,
-		.AddressMode           = HAL_OSPI_ADDRESS_4_LINES,
-		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
-		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
-		.AlternateBytes        = 0,
-		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
-		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
-		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
-		.DataMode              = HAL_OSPI_DATA_4_LINES,
-		.NbData                = 2,
-		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
-		.DummyCycles           = 0,
-		.DQSMode               = HAL_OSPI_DQS_DISABLE,
-		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
-	};
-	HAL_StatusTypeDef status;
-	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
-	if (status != HAL_OK) Error_Handler();
-
-	status = HAL_OSPI_Transmit(&hospi1, (uint8_t*)&word, HAL_MAX_DELAY);
-	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
-	if (status != HAL_OK) Error_Handler();
+	uint32_t addr[4] = { 0x555, 0x2AA, 0x555, Address };
+	uint16_t data[4] = { 0xAA,  0x55,  0xA0,  word };
+	QSPI_WriteWords(addr, data, 4);
 }
 
 void QSPI_ProgramBuffer(uint32_t SectorAddress, uint16_t *data, uint16_t count)
@@ -251,66 +189,16 @@ void QSPI_ProgramBuffer_single(uint32_t SectorAddress, uint16_t word, uint16_t c
 
 void QSPI_EraseSector(uint32_t SectorAddress)
 {
-	OSPI_RegularCmdTypeDef cmd = {
-		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
-		.FlashId               = HAL_OSPI_FLASH_ID_1,
-		.Instruction           = 0xD8,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
-		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
-		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
-		.Address               = SectorAddress,
-		.AddressMode           = HAL_OSPI_ADDRESS_4_LINES,
-		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
-		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
-		.AlternateBytes        = 0,
-		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
-		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
-		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
-		.DataMode              = HAL_OSPI_DATA_NONE,
-		.NbData                = 0,
-		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
-		.DummyCycles           = 0,
-		.DQSMode               = HAL_OSPI_DQS_DISABLE,
-		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
-	};
-	HAL_StatusTypeDef status;
-	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
-	if (status != HAL_OK) Error_Handler();
-
-	int dummy = 0;
-	HAL_OSPI_Transmit(&hospi1, (uint8_t*)&dummy, HAL_MAX_DELAY);
-	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
-	if (status != HAL_OK) Error_Handler();
+	uint32_t addr[6] = { 0x555, 0x2AA, 0x555, 0x555, 0x2AA, SectorAddress };
+	uint16_t data[6] = { 0xAA,  0x55,  0x80,  0xAA,  0x55,  0x30 };
+	QSPI_WriteWords(addr, data, 6);
 }
 
 void QSPI_EraseChip(void)
 {
-	OSPI_RegularCmdTypeDef cmd = {
-		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
-		.FlashId               = HAL_OSPI_FLASH_ID_1,
-		.Instruction           = 0x60,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
-		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
-		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
-		.Address               = 0,
-		.AddressMode           = HAL_OSPI_ADDRESS_NONE,
-		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
-		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
-		.AlternateBytes        = 0,
-		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
-		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
-		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
-		.DataMode              = HAL_OSPI_DATA_NONE,
-		.NbData                = 0,
-		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
-		.DummyCycles           = 0,
-		.DQSMode               = HAL_OSPI_DQS_DISABLE,
-		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
-	};
-	HAL_StatusTypeDef status;
-	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
-	if (status != HAL_OK) Error_Handler();
-	// Instruction-only commands are sent immediately
+	uint32_t addr[6] = { 0x555, 0x2AA, 0x555, 0x555, 0x2AA, 0x555 };
+	uint16_t data[6] = { 0xAA,  0x55,  0x80,  0xAA,  0x55,  0x10 };
+	QSPI_WriteWords(addr, data, 6);
 }
 
 void QSPI_EnterVt(void)
@@ -319,7 +207,7 @@ void QSPI_EnterVt(void)
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
 		.Instruction           = 0xFB,
-		.InstructionMode       = HAL_OSPI_INSTRUCTION_1_LINE,
+		.InstructionMode       = HAL_OSPI_INSTRUCTION_4_LINES,
 		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
 		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
 		.Address               = 0,
@@ -345,6 +233,9 @@ void QSPI_EnterVt(void)
 
 void QSPI_ExitVt(void)
 {
+	QSPI_WriteWord(0, 0xF0);
+	
+	/*
 	OSPI_RegularCmdTypeDef cmd = {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
@@ -371,4 +262,5 @@ void QSPI_ExitVt(void)
 	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
 	if (status != HAL_OK) Error_Handler();
 	// Instruction-only commands are sent immediately
+	*/
 }
