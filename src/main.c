@@ -22,6 +22,7 @@ TIM_HandleTypeDef  htim12;
 TIM_HandleTypeDef  htim13;
 
 volatile int gMainLoopSemaphore;
+volatile uint32_t gResetFlags;
 // TODO: Move this to a header?
 uint32_t g_config_save_requested;
 
@@ -38,6 +39,16 @@ static void MX_TIM13_Init(void);
 extern void HAL_TIM_MspPostInit(TIM_HandleTypeDef *handle);
 
 /* Private user code ---------------------------------------------------------*/
+
+/* Resets --------------------------------------------------------------------*/
+
+void SaveResets(void)
+{
+	// store RCC RSR register
+	gResetFlags = RCC->RSR;
+}
+
+/* Flash ---------------------------------------------------------------------*/
 
 typedef union __packed __aligned(4) {
 	struct {
@@ -153,6 +164,9 @@ void FlashConfigInit(void) {
  */
 int main(void)
 {
+	/* Save reset reason -------------------------------------------------------*/
+	SaveResets();
+
 	/* Enable I-Cache---------------------------------------------------------*/
 	SCB_EnableICache();
 
