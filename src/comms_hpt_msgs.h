@@ -124,6 +124,9 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 	uint32_t		UptimeSeconds;
 	uint8_t			VersionString[16];
 	uint32_t		IsDetectorBusy;
+	uint32_t		ResetFlags;
+	uint32_t		Task;
+	uint32_t		TaskState;
 } HPT_PingRsp;
 
 typedef __PACKED_STRUCT __ALIGNED(4)

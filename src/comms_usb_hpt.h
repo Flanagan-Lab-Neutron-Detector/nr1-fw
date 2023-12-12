@@ -20,6 +20,7 @@ extern "C" {
 #include <stdint.h>
 
 EXTERN uint8_t g_comms_cmd_req;
+EXTERN uint32_t g_comms_cmd_req_state;
 
 void comms_usb_hpt_reset(void);
 

@@ -294,7 +294,10 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 		g_msg_rsp.PingRsp.VersionString[7] = 't';
 		g_msg_rsp.PingRsp.VersionString[8] = '\0';
 		for (uint32_t i=9; i<16; i++) g_msg_rsp.PingRsp.VersionString[i] = 0;
-		g_msg_rsp.PingRsp.IsDetectorBusy = g_comms_cmd_req != HPT_NULL_MSG_CMD;
+		g_msg_rsp.PingRsp.IsDetectorBusy   = g_comms_cmd_req != HPT_NULL_MSG_CMD;
+		g_msg_rsp.PingRsp.ResetFlags       = gResetFlags;
+		g_msg_rsp.PingRsp.Task             = g_comms_cmd_req;
+		g_msg_rsp.PingRsp.TaskState        = g_comms_cmd_req_state;
 	} else if (cmd == HPT_ANA_GET_CAL_COUNTS_CMD && (msg->AnaGetCalCountsCmd.AnalogUnit == 1 || msg->AnaGetCalCountsCmd.AnalogUnit == 2)) {
 		// Parse DAC unit
 		float CalC0 = 0, CalC1 = 0;
@@ -405,30 +408,42 @@ void comms_usb_hpt_tick(void)
 {
 	// TODO: Request FIFO?
 
+	g_comms_cmd_req_state = 1;
 	switch (g_comms_cmd_req) {
 		case HPT_ERASE_CHIP_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_ERASE_CHIP_CMD");
+			g_comms_cmd_req_state = 2;
 			DetReset();
+			g_comms_cmd_req_state = 3;
 			gDetApi->EraseChip();
 			break;
 		case HPT_ERASE_SECTOR_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_ERASE_SECTOR_CMD");
+			g_comms_cmd_req_state = 2;
 			DetReset();
+			g_comms_cmd_req_state = 3;
 			gDetApi->EraseSector(m_cmd_copy.EraseSectorCmd.SectorAddress);
 			break;
 		case HPT_PROGRAM_SECTOR_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_PROGRAM_SECTOR_CMD");
+			g_comms_cmd_req_state = 2;
 			DetReset();
-			DetCmdProgramSector(m_cmd_copy.ProgramSectorCmd.SectorAddress, m_cmd_copy.ProgramSectorCmd.ProgramValue);
+			g_comms_cmd_req_state = 3;
+			DetCmdProgramSector(m_cmd_copy.ProgramSectorCmd.SectorAddress, m_cmd_copy.ProgramSectorCmd.ProgramValue);;
 			break;
 		case HPT_PROGRAM_CHIP_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_PROGRAM_CHIP_CMD");
+			g_comms_cmd_req_state = 2;
 			DetReset();
-			for (uint32_t i=0; i<1024; i++)
+			g_comms_cmd_req_state = 3;
+			for (uint32_t i=0; i<1024; i++) {
+				g_comms_cmd_req_state = 4 + i;
 				DetCmdProgramSector(i * 0x10000, m_cmd_copy.ProgramChipCmd.ProgramValue);
+			}
 			break;
 		case HPT_WRITE_DATA_CMD:
 			puts("[comms_usb_hpt_tick] Handling HPT_WRITE_DATA_CMD");
+			g_comms_cmd_req_state = 2;
 			gDetApi->ProgramBuffer(m_cmd_copy.WriteDataCmd.BaseAddress, m_cmd_copy.WriteDataCmd.Data, m_cmd_copy.WriteDataCmd.NumWords);
 			break;
 		default:
@@ -438,4 +453,5 @@ void comms_usb_hpt_tick(void)
 	}
 
 	g_comms_cmd_req = HPT_NULL_MSG_CMD;
+	g_comms_cmd_req_state = 0;
 }
