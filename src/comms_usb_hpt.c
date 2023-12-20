@@ -178,6 +178,38 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_MsgRsp *rsp)
 }
 
 /**
+ * @brief Handle write config
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_write_cfg_cmd(HPT_WriteCfgCmd *cmd, HPT_MsgRsp *rsp)
+{
+	uint32_t addr = cmd->Address | 0x80000000;
+	uint16_t word = (uint16_t)cmd->Data;
+	gDetApi->WriteCommandWord(addr, word);
+	rsp->CmdRsp = HPT_WRITE_CFG_RSP;
+}
+
+/**
+ * @brief Handle read config
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_read_cfg_cmd(HPT_ReadCfgCmd *cmd, HPT_MsgRsp *rsp)
+{
+	uint32_t addr = cmd->Address | 0x80000000;
+	rsp->ReadCfgRsp.Data = gDetApi->ReadWord(addr);
+	rsp->CmdRsp = HPT_READ_CFG_RSP;
+	rsp->Length += sizeof(HPT_ReadCfgRsp);
+}
+
+/**
  * @brief Handle analog set calibration counts
  *
  * Sets calibration counts for the specified analog unit. NR1B supports units 1 (reset/vwl) and 2 (wp).
@@ -349,6 +381,12 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 				break;
 			case HPT_READ_WORD_CMD:
 				comms_hpt_handle_read_word_cmd(&msg->ReadWordCmd, &g_msg_rsp);
+				break;
+			case HPT_WRITE_CFG_CMD:
+				comms_hpt_handle_write_cfg_cmd(&msg->WriteCfgCmd, &g_msg_rsp);
+				break;
+			case HPT_READ_CFG_CMD:
+				comms_hpt_handle_read_cfg_cmd(&msg->ReadCfgCmd, &g_msg_rsp);
 				break;
 			case HPT_ANA_SET_CAL_COUNTS_CMD:
 				comms_hpt_handle_ana_set_cal_counts(&msg->AnaSetCalCountsCmd, &g_msg_rsp);
