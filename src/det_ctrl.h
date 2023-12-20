@@ -69,8 +69,8 @@ typedef struct
 	void		(*WriteCommandWords)(uint32_t *addrs, uint16_t *words, uint32_t count);
 	void		(*WriteBlock)(uint32_t base, uint32_t count, uint16_t *block);
 	void        (*ProgramWord)(uint32_t address, uint16_t word);
-	void		(*ProgramBuffer)(uint32_t SectorAddress, uint16_t *data, uint16_t count);
-	void		(*ProgramBuffer_single)(uint32_t SectorAddress, uint16_t word, uint16_t count);
+	void		(*ProgramBuffer)(uint32_t SectorAddress, uint16_t *data, uint32_t count);
+	void		(*ProgramBuffer_single)(uint32_t SectorAddress, uint16_t word, uint32_t count);
 	void		(*EraseSector)(uint32_t SectorAddress);
 	void		(*EraseChip)(void);
 	void        (*EnterVt)(void);
