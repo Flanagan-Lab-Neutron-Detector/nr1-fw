@@ -33,7 +33,9 @@ S_DetApi gQSPIDriver = {
 	.EraseSector			= QSPI_EraseSector,
 	.EraseChip				= QSPI_EraseChip,
 	.EnterVt                = QSPI_EnterVt,
-	.ExitVt                 = QSPI_ExitVt
+	.ExitVt                 = QSPI_ExitVt,
+	.EnterCfgFlash          = QSPI_EnterCfgFlash,
+	.ExitCfgFlash           = QSPI_ExitCfgFlash
 };
 
 void QSPI_Open(void)
@@ -303,4 +305,41 @@ void QSPI_ExitVt(void)
 	if (status != HAL_OK) Error_Handler();
 	// Instruction-only commands are sent immediately
 	*/
+}
+
+void QSPI_EnterCfgFlash(void)
+{
+	OSPI_RegularCmdTypeDef cmd = {
+		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
+		.FlashId               = HAL_OSPI_FLASH_ID_1,
+		.Instruction           = 0xFC,
+		.InstructionMode       = HAL_OSPI_INSTRUCTION_4_LINES,
+		.InstructionSize       = HAL_OSPI_INSTRUCTION_8_BITS,
+		.InstructionDtrMode    = HAL_OSPI_INSTRUCTION_DTR_DISABLE,
+		.Address               = 0,
+		.AddressMode           = HAL_OSPI_ADDRESS_NONE,
+		.AddressSize           = HAL_OSPI_ADDRESS_32_BITS,
+		.AddressDtrMode        = HAL_OSPI_ADDRESS_DTR_DISABLE,
+		.AlternateBytes        = 0,
+		.AlternateBytesMode    = HAL_OSPI_ALTERNATE_BYTES_NONE,
+		.AlternateBytesSize    = HAL_OSPI_ALTERNATE_BYTES_8_BITS,
+		.AlternateBytesDtrMode = HAL_OSPI_ALTERNATE_BYTES_DTR_DISABLE,
+		.DataMode              = HAL_OSPI_DATA_NONE,
+		.NbData                = 0,
+		.DataDtrMode           = HAL_OSPI_DATA_DTR_DISABLE,
+		.DummyCycles           = 0,
+		.DQSMode               = HAL_OSPI_DQS_DISABLE,
+		.SIOOMode              = HAL_OSPI_SIOO_INST_EVERY_CMD
+	};
+	HAL_StatusTypeDef status;
+	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
+	if (status != HAL_OK) Error_Handler();
+	// Instruction-only commands are sent immediately
+
+	// TODO: Does this need a reset?
+}
+
+void QSPI_ExitCfgFlash(void)
+{
+	// TODO: reset ourselves?
 }

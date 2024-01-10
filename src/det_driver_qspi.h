@@ -25,6 +25,8 @@ extern void	    QSPI_EraseSector(uint32_t SectorAddress);
 extern void	    QSPI_EraseChip(void);
 extern void     QSPI_EnterVt(void);
 extern void     QSPI_ExitVt(void);
+extern void     QSPI_EnterCfgFlash(void);
+extern void     QSPI_ExitCfgFlash(void);
 
 extern S_DetApi gQSPIDriver;
 

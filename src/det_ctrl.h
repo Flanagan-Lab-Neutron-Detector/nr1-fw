@@ -73,8 +73,11 @@ typedef struct
 	void		(*ProgramBuffer_single)(uint32_t SectorAddress, uint16_t word, uint32_t count);
 	void		(*EraseSector)(uint32_t SectorAddress);
 	void		(*EraseChip)(void);
+
 	void        (*EnterVt)(void);
 	void        (*ExitVt)(void);
+	void        (*EnterCfgFlash)(void);
+	void        (*ExitCfgFlash)(void);
 } S_DetApi;
 
 EXTERN S_DetApi			*gDetApi;

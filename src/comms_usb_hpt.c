@@ -9,6 +9,7 @@
 #include "usbd_cdc_if.h"
 #include "det_ctrl.h"
 #include "analog.h"
+#include "qspi_flash_driver.h"
 #include <stdbool.h>
 
 // debug
@@ -210,6 +211,130 @@ void comms_hpt_handle_read_cfg_cmd(HPT_ReadCfgCmd *cmd, HPT_MsgRsp *rsp)
 }
 
 /**
+ * @brief Handle config flash enter
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_enter_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	gDetApi->EnterCfgFlash();
+	rsp->CmdRsp = HPT_CFG_FLASH_ENTER_RSP;
+}
+
+/**
+ * @brief Handle config flash exit
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_exit_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	gDetApi->ExitCfgFlash();
+	rsp->CmdRsp = HPT_CFG_FLASH_EXIT_RSP;
+}
+
+/**
+ * @brief Handle config flash read
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_read_cmd(HPT_CfgFlashReadCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	QSPI_Flash_ReadBlock(cmd->Address, cmd->NumBytes, rsp->CfgFlashReadRsp.Data);
+	QSPI_Flash_PowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_READ_RSP;
+	rsp->Length += cmd->NumBytes * sizeof(uint8_t);
+}
+
+/**
+ * @brief Handle config flash write
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_write_cmd(HPT_CfgFlashWriteCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	QSPI_Flash_ProgramBuffer(cmd->BaseAddress, cmd->Data, cmd->NumWords);
+	QSPI_Flash_PowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_WRITE_RSP;
+}
+
+/**
+ * @brief Handle config flash erase
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_erase_cmd(HPT_CfgFlashEraseCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_ERASE_RSP;
+	switch (cmd->EraseType) {
+		case 0: QSPI_Flash_EraseSector(cmd->Address); break;
+		case 1: QSPI_Flash_EraseBlock32(cmd->Address); break;
+		case 2: QSPI_Flash_EraseBlock64(cmd->Address); break;
+		case 3: QSPI_Flash_EraseChip(); break;
+		default:
+			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+			rsp->FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_INVALID_PARAM;
+			rsp->FailureRsp.Failures++;
+			break;
+	}
+	QSPI_Flash_PowerDown();
+}
+
+/**
+ * @brief Handle config flash get device info
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_dev_info_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	uint8_t mf, id, jedec_type, jedec_cap;
+	uint8_t sr1, sr2, sr3;
+
+	QSPI_Flash_ReleasePowerDown();
+	QSPI_Flash_ReadMfgDevID(&mf, &id);
+	QSPI_Flash_ReadJEDECID(&mf, &jedec_type, &jedec_cap);
+	QSPI_Flash_ReadUniqueID(rsp->CfgFlashDevInfoRsp.UniqueID);
+	sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+	sr2 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_2);
+	sr3 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_3);
+	QSPI_Flash_PowerDown();
+
+	rsp->CfgFlashDevInfoRsp.ManufacturerID  = mf;
+	rsp->CfgFlashDevInfoRsp.DeviceID        = id;
+	rsp->CfgFlashDevInfoRsp.JEDECType       = jedec_type;
+	rsp->CfgFlashDevInfoRsp.JEDECCapacity   = jedec_cap;
+	rsp->CfgFlashDevInfoRsp.StatusRegister1 = sr1;
+	rsp->CfgFlashDevInfoRsp.StatusRegister2 = sr2;
+	rsp->CfgFlashDevInfoRsp.StatusRegister3 = sr3;
+	rsp->CfgFlashDevInfoRsp._Pad[0] = 0;
+	rsp->CmdRsp = HPT_CFG_FLASH_DEV_INFO_RSP;
+	rsp->Length += sizeof(HPT_CfgFlashDevInfoRsp);
+}
+
+/**
  * @brief Handle analog set calibration counts
  *
  * Sets calibration counts for the specified analog unit. NR1B supports units 1 (reset/vwl) and 2 (wp).
@@ -387,6 +512,24 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 				break;
 			case HPT_READ_CFG_CMD:
 				comms_hpt_handle_read_cfg_cmd(&msg->ReadCfgCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_ENTER_CMD:
+				comms_hpt_handle_cfg_flash_enter_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_EXIT_CMD:
+				comms_hpt_handle_cfg_flash_exit_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_READ_CMD:
+				comms_hpt_handle_cfg_flash_read_cmd(&msg->CfgFlashReadCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_WRITE_CMD:
+				comms_hpt_handle_cfg_flash_write_cmd(&msg->CfgFlashWriteCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_ERASE_CMD:
+				comms_hpt_handle_cfg_flash_erase_cmd(&msg->CfgFlashEraseCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_DEV_INFO_CMD:
+				comms_hpt_handle_cfg_flash_dev_info_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
 				break;
 			case HPT_ANA_SET_CAL_COUNTS_CMD:
 				comms_hpt_handle_ana_set_cal_counts(&msg->AnaSetCalCountsCmd, &g_msg_rsp);

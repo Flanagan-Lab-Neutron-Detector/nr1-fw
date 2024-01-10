@@ -25,6 +25,7 @@ BUILD_DIR = build
 ######################################
 # C sources
 C_SOURCES =  \
+src/qspi_flash_driver.c \
 src/analog.c \
 src/det_driver_qspi.c \
 src/det_ctrl.c \
