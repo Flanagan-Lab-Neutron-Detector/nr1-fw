@@ -407,11 +407,10 @@ void QSPI_EnterCfgFlash(void)
 	status = HAL_OSPI_Command(&hospi1, &cmd, HAL_MAX_DELAY);
 	if (status != HAL_OK) Error_Handler();
 	// Instruction-only commands are sent immediately
-
-	// TODO: Does this need a reset?
 }
 
 void QSPI_ExitCfgFlash(void)
 {
-	// TODO: reset ourselves?
+	// Currently we can only exit CFG flash bypass by resetting the whole system
+	gSysReqReset = 1;
 }
