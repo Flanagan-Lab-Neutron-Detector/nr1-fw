@@ -250,7 +250,7 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 {
 	uint32_t		BaseAddress;
 	uint32_t		NumWords;				// how many words to write
-	uint8_t			Data[256];
+	uint8_t			Data[1024];
 } HPT_CfgFlashWriteCmd;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
