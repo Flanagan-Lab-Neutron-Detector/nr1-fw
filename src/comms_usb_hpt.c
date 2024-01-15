@@ -26,6 +26,11 @@ extern CRC_HandleTypeDef hcrc;
  */
 static HPT_MsgRsp g_msg_rsp;
 
+/**
+ * @brief Global current requested command
+ */
+static HPT_MsgCmd g_msg_cmd;
+
 static HPT_MsgCmd m_cmd_copy; // copy for slow processing (outside of interrupt)
 
 void comms_usb_hpt_reset(void)
@@ -268,7 +273,21 @@ void comms_hpt_handle_cfg_flash_read_cmd(HPT_CfgFlashReadCmd *cmd, HPT_MsgRsp *r
 void comms_hpt_handle_cfg_flash_write_cmd(HPT_CfgFlashWriteCmd *cmd, HPT_MsgRsp *rsp)
 {
 	QSPI_Flash_ReleasePowerDown();
-	QSPI_Flash_ProgramBuffer(cmd->BaseAddress, cmd->Data, cmd->NumWords);
+	uint32_t remaining = cmd->NumWords;
+	uint32_t address = cmd->BaseAddress;
+	uint8_t *data = cmd->Data;
+	while (remaining > 0) {
+		uint32_t count = remaining > 256 ? 256 : remaining;
+		QSPI_Flash_ProgramBuffer(address, data, count);
+		remaining -= count;
+		address += count;
+		data += count;
+
+		// wait for write to complete
+		uint8_t sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+		while (sr1 & 0x01) sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+	}
+	//QSPI_Flash_ProgramBuffer(cmd->BaseAddress, cmd->Data, cmd->NumWords);
 	QSPI_Flash_PowerDown();
 	rsp->CmdRsp = HPT_CFG_FLASH_WRITE_RSP;
 }
@@ -559,7 +578,105 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 #undef COMMS_CHECK_DISPATCH
 }
 
+typedef enum {
+	COMMS_HPT_RX_STATE_START,
+	COMMS_HPT_RX_STATE_LENGTH_0,
+	COMMS_HPT_RX_STATE_LENGTH_1,
+	COMMS_HPT_RX_STATE_CMD,
+	COMMS_HPT_RX_STATE_PAYLOAD,
+	COMMS_HPT_RX_STATE_CRC_0,
+	COMMS_HPT_RX_STATE_CRC_1,
+	COMMS_HPT_RX_STATE_CRC_2,
+	COMMS_HPT_RX_STATE_CRC_3,
+} comms_hpt_rx_state;
+comms_hpt_rx_state g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+uint32_t g_comms_hpt_rx_count = 0; // payload index
+
 void comms_usb_hpt_receive_bytes(uint8_t *bytes, uint32_t nbytes, void **send_data, uint32_t *send_len)
+{
+	printf("rec %ld state=%d\n", nbytes, g_comms_hpt_rx_state);
+	uint32_t total_crc = 0;
+	*send_data = NULL;
+	*send_len = 0;
+	uint32_t i=0;
+	while (i < nbytes) {
+		switch (g_comms_hpt_rx_state) {
+			case COMMS_HPT_RX_STATE_START:
+				if (bytes[i] == '~') {
+					g_msg_cmd.StartChar = bytes[i];
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_LENGTH_0;
+				}
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_LENGTH_0:
+				g_msg_cmd.Length = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_LENGTH_1;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_LENGTH_1:
+				g_msg_cmd.Length |= ((uint16_t)bytes[i] << 8);
+				if (g_msg_cmd.Length > (64 + HPT_MAX_CMD_PAYLOAD)) {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+					break;
+				} else {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CMD;
+				}
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CMD:
+				g_msg_cmd.CmdRsp = bytes[i];
+				g_comms_hpt_rx_count = 0;
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_PAYLOAD;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_PAYLOAD:
+				while (i < nbytes && g_comms_hpt_rx_count < (uint32_t)(g_msg_cmd.Length - 8)) {
+					g_msg_cmd.RawData[4 + g_comms_hpt_rx_count] = bytes[i];
+					g_comms_hpt_rx_count++;
+					i++;
+				}
+				if (g_comms_hpt_rx_count == (uint32_t)(g_msg_cmd.Length - 8)) {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_0;
+				}
+				break;
+			case COMMS_HPT_RX_STATE_CRC_0:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 4] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_1;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_1:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 3] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_2;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_2:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 2] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_3;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_3:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 1] = bytes[i];
+				// validate CRC
+				total_crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)&g_msg_cmd.RawData32Bit[0], g_msg_cmd.Length/4);
+				if (total_crc == 0) {
+					comms_usb_hpt_receive_msg(&g_msg_cmd);
+					// comms_usb_hpt_receive_msg fills out g_msg_rsp
+					if (g_msg_rsp.Length != 0) {
+						*send_data = &g_msg_rsp;
+						*send_len = (uint32_t)g_msg_rsp.Length;
+					}
+				}
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+				i++;
+				break;
+			default:
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+				break;
+		}
+	}
+}
+
+void comms_usb_hpt_receive_bytes_onepacket(uint8_t *bytes, uint32_t nbytes, void **send_data, uint32_t *send_len)
 {
 	// TODO: message split across USB packets?
 	if (nbytes > 7) {
