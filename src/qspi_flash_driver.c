@@ -174,6 +174,7 @@ void QSPI_Flash_ProgramWord(uint32_t addr, uint8_t word)
 
 void QSPI_Flash_ProgramBuffer(uint32_t base, uint8_t *data, uint32_t count)
 {
+	QSPI_Flash_WriteEnable();
     OSPI_RegularCmdTypeDef cmd = {
 		.OperationType         = HAL_OSPI_OPTYPE_COMMON_CFG,
 		.FlashId               = HAL_OSPI_FLASH_ID_1,
@@ -204,28 +205,38 @@ void QSPI_Flash_ProgramBuffer(uint32_t base, uint8_t *data, uint32_t count)
 	status = HAL_OSPI_Transmit(&hospi1, data, HAL_MAX_DELAY);
 	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
 	if (status != HAL_OK) Error_Handler();
+
+	// write disabled after program
 }
 
 // erase
 
 void QSPI_Flash_EraseSector(uint32_t SectorAddress) // erase 4kB sector
 {
+	QSPI_Flash_WriteEnable();
     txn_inst_a(0x20, SectorAddress);
+	// write disabled after sector erase
 }
 
 void QSPI_Flash_EraseBlock32(uint32_t BlockAddress) // erase 32kB block
 {
+	QSPI_Flash_WriteEnable();
     txn_inst_a(0x52, BlockAddress);
+	// write disabled after block erase
 }
 
 void QSPI_Flash_EraseBlock64(uint32_t BlockAddress) // erase 64kB block
 {
+	QSPI_Flash_WriteEnable();
     txn_inst_a(0xD8, BlockAddress);
+	// write disabled after block erase
 }
 
 void QSPI_Flash_EraseChip(void)
 {
+	QSPI_Flash_WriteEnable();
     txn_inst(0x60);
+	// write disabled after chip erase
 }
 
 // write enable/disable
@@ -292,6 +303,7 @@ uint8_t QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG sr) // Read status regist
 
 void QSPI_Flash_WriteStatusReg(QSPI_FLASH_STATUS_REG sr, uint8_t value) // Write status register 1/2/3
 {
+	QSPI_Flash_WriteEnable();
     uint8_t inst = 0;
     switch (sr) {
         case QSPI_FLASH_STATUS_REG_1: inst = 0x01; break;
@@ -329,6 +341,8 @@ void QSPI_Flash_WriteStatusReg(QSPI_FLASH_STATUS_REG sr, uint8_t value) // Write
 	status = HAL_OSPI_Transmit(&hospi1, &value, HAL_MAX_DELAY);
 	while (HAL_OSPI_GetState(&hospi1) != HAL_OSPI_STATE_READY) ;
 	if (status != HAL_OK) Error_Handler();
+
+	// write disabled after write status register
 }
 
 // reset
