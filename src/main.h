@@ -19,6 +19,7 @@ void Error_Handler(void);
 /* Exported variables --------------------------------------------------------*/
 extern volatile int gMainLoopSemaphore; // Set by tim13 isr, reset in main loop
 extern volatile uint32_t gResetFlags; // capture reset flags
+extern volatile uint32_t gSysReqReset; // set to request a software reset
 
 /* Private defines -----------------------------------------------------------*/
 #define B1_Pin GPIO_PIN_13

@@ -54,6 +54,23 @@ typedef enum __attribute__((__packed__))
 	HPT_WRITE_DATA_RSP				= 21,
 	HPT_READ_WORD_CMD				= 22,			// read single word
 	HPT_READ_WORD_RSP				= 23,
+	HPT_WRITE_CFG_CMD				= 24,			// write config word
+	HPT_WRITE_CFG_RSP				= 25,
+	HPT_READ_CFG_CMD				= 26,			// read config word
+	HPT_READ_CFG_RSP				= 27,
+
+	HPT_CFG_FLASH_ENTER_CMD			= 28,			// enter interface FPGA configuration flash access mode
+	HPT_CFG_FLASH_ENTER_RSP			= 29,
+	HPT_CFG_FLASH_EXIT_CMD			= 30,			// exit interface FPGA configuration flash access mode
+	HPT_CFG_FLASH_EXIT_RSP			= 31,
+	HPT_CFG_FLASH_READ_CMD			= 32,			// read from interface FPGA configuration flash
+	HPT_CFG_FLASH_READ_RSP			= 33,
+	HPT_CFG_FLASH_WRITE_CMD			= 34,			// write to interface FPGA configuration flash
+	HPT_CFG_FLASH_WRITE_RSP			= 35,
+	HPT_CFG_FLASH_ERASE_CMD			= 36,			// erase interface FPGA configuration flash
+	HPT_CFG_FLASH_ERASE_RSP			= 37,
+	HPT_CFG_FLASH_DEV_INFO_CMD		= 38,			// get interface FPGA configuration flash device info
+	HPT_CFG_FLASH_DEV_INFO_RSP		= 39,
 
 	HPT_ANA_GET_CAL_COUNTS_CMD		= 80,			// analog: get calibration counts for all channels
 	HPT_ANA_GET_CAL_COUNTS_RSP		= 81,
@@ -204,6 +221,59 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
+	uint32_t		Address;
+	uint32_t		Data;
+} HPT_WriteCfgCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		Address;
+} HPT_ReadCfgCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		Data;
+} HPT_ReadCfgRsp;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		Address;
+	uint32_t		NumBytes;
+} HPT_CfgFlashReadCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint8_t			Data[4096];
+} HPT_CfgFlashReadRsp;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		BaseAddress;
+	uint32_t		NumWords;				// how many words to write
+	uint8_t			Data[1024];
+} HPT_CfgFlashWriteCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint32_t		Address;
+	uint32_t		EraseType; // 0 = sector (4K), 1 = block (32K), 2 = block (64K), 3 = chip
+} HPT_CfgFlashEraseCmd;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
+	uint8_t			ManufacturerID;
+	uint8_t			DeviceID;
+	uint8_t			JEDECType;
+	uint8_t			JEDECCapacity;
+	uint8_t			UniqueID[4];
+	uint8_t			StatusRegister1;
+	uint8_t			StatusRegister2;
+	uint8_t			StatusRegister3;
+	uint8_t			_Pad[1];
+} HPT_CfgFlashDevInfoRsp;
+
+typedef __PACKED_STRUCT __ALIGNED(4)
+{
 	uint32_t		AnalogUnit; // 0=CE 1=RESET 2=WP/ACC 3=SPARE
 } HPT_AnaGetCalCountsCmd;
 
@@ -253,6 +323,12 @@ typedef __PACKED_UNION __ALIGNED(4)
 			HPT_ReadDataCmd				ReadDataCmd;
 			HPT_WriteDataCmd			WriteDataCmd;
 			HPT_ReadWordCmd				ReadWordCmd;
+			HPT_WriteCfgCmd				WriteCfgCmd;
+			HPT_ReadCfgCmd				ReadCfgCmd;
+			
+			HPT_CfgFlashReadCmd			CfgFlashReadCmd;
+			HPT_CfgFlashWriteCmd		CfgFlashWriteCmd;
+			HPT_CfgFlashEraseCmd		CfgFlashEraseCmd;
 
 			HPT_AnaGetCalCountsCmd		AnaGetCalCountsCmd;
 			HPT_AnaSetCalCountsCmd		AnaSetCalCountsCmd;
@@ -286,6 +362,9 @@ typedef __PACKED_UNION __ALIGNED(4)
 			HPT_GetSectorBitCountRsp	GetSectorBitCountRsp;
 			HPT_ReadDataRsp				ReadDataRsp;
 			HPT_ReadWordRsp				ReadWordRsp;
+			HPT_ReadCfgRsp				ReadCfgRsp;
+			HPT_CfgFlashReadRsp			CfgFlashReadRsp;
+			HPT_CfgFlashDevInfoRsp		CfgFlashDevInfoRsp;
 			HPT_AnaGetCalCountsRsp		AnaGetCalCountsRsp;
 			HPT_NoDataCmdRsp            NoDataCmdRsp;
 		};
@@ -311,6 +390,11 @@ static_assert(offsetof(HPT_MsgCmd, GetSectorBitCountCmd)  == 4, "GetSectorBitCou
 static_assert(offsetof(HPT_MsgCmd, ReadDataCmd)           == 4, "ReadDataCmd is not at offset 4");
 static_assert(offsetof(HPT_MsgCmd, WriteDataCmd)          == 4, "WriteDataCmd is not at offset 4");
 static_assert(offsetof(HPT_MsgCmd, ReadWordCmd)           == 4, "ReadWordCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, WriteCfgCmd)           == 4, "WriteCfgCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, ReadCfgCmd)            == 4, "ReadCfgCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, CfgFlashReadCmd)       == 4, "CfgFlashReadCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, CfgFlashWriteCmd)      == 4, "CfgFlashWriteCmd is not at offset 4");
+static_assert(offsetof(HPT_MsgCmd, CfgFlashEraseCmd)      == 4, "CfgFlashEraseCmd is not at offset 4");
 static_assert(offsetof(HPT_MsgCmd, AnaSetCalCountsCmd)    == 4, "AnaSetCalCountsCmd is not at offset 4");
 static_assert(offsetof(HPT_MsgCmd, AnaSetActiveCountsCmd) == 4, "AnaSetActiveCountsCmd is not at offset 4");
 static_assert(offsetof(HPT_MsgCmd, NoDataCmdRsp)          == 4, "NoDataCmdRsp is not at offset 4");
@@ -322,6 +406,9 @@ static_assert(offsetof(HPT_MsgRsp, VtGetBitCountKPageRsp) == 4, "VtGetBitCountKP
 static_assert(offsetof(HPT_MsgRsp, GetSectorBitCountRsp)  == 4, "GetSectorBitCountRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, ReadDataRsp)           == 4, "ReadDataRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, ReadWordRsp)           == 4, "ReadWordRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, ReadCfgRsp)            == 4, "ReadCfgRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, CfgFlashReadRsp)       == 4, "CfgFlashReadRsp is not at offset 4");
+static_assert(offsetof(HPT_MsgRsp, CfgFlashDevInfoRsp)    == 4, "CfgFlashDevInfoRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, AnaGetCalCountsRsp)    == 4, "AnaGetCalCountsRsp is not at offset 4");
 static_assert(offsetof(HPT_MsgRsp, NoDataCmdRsp)          == 4, "NoDataCmdRsp is not at offset 4");
 

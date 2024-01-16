@@ -123,7 +123,7 @@ int DetEnterVtMode(void)
 	if (dacerr != DAC_SUCCESS)
 		return 2;
 
-	detDelay(1000);
+	//detDelay(1000);
 
 	if (DetSetVt(3000)) // Safe default to 3V. Users should call DetSetVt
 		return 3;
@@ -308,18 +308,17 @@ void DetCmdCountBitsKPage(uint32_t address, uint8_t *countBlock)
 void DetCmdProgramSector(uint32_t address, uint16_t word)
 {
 	//uint32_t usdelay = 2 << gDetInfo.CfiInterface.TypTimeSingleWordWrite;
+	gDetApi->ProgramBuffer_single(address, word, 65536);
+
+	/*
 	for (uint32_t i=0; i<2048; i++)
 	{
 		for (uint32_t j=0; j<32; j++) {
 			gDetApi->ProgramWord(address + 32*i + j, word);
 			HAL_Delay(1);
 		}
-		/*gDetApi->ProgramBuffer_single(address + 16*i, word, 16);
-		while (DET_BUSY) {
-			// TODO: Check status lines
-		}*/
-		//while (DET_BUSY) { i += 1; i -= 1; }
 	}
+	*/
 }
 
 uint32_t DetCmdCountBitsSector(uint32_t address)

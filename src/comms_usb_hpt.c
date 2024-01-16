@@ -9,6 +9,7 @@
 #include "usbd_cdc_if.h"
 #include "det_ctrl.h"
 #include "analog.h"
+#include "qspi_flash_driver.h"
 #include <stdbool.h>
 
 // debug
@@ -24,6 +25,11 @@ extern CRC_HandleTypeDef hcrc;
  *
  */
 static HPT_MsgRsp g_msg_rsp;
+
+/**
+ * @brief Global current requested command
+ */
+static HPT_MsgCmd g_msg_cmd;
 
 static HPT_MsgCmd m_cmd_copy; // copy for slow processing (outside of interrupt)
 
@@ -175,6 +181,176 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_MsgRsp *rsp)
 
 	rsp->CmdRsp = HPT_READ_WORD_RSP;
 	rsp->Length += sizeof(HPT_ReadWordRsp);
+}
+
+/**
+ * @brief Handle write config
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_write_cfg_cmd(HPT_WriteCfgCmd *cmd, HPT_MsgRsp *rsp)
+{
+	uint32_t addr = cmd->Address | 0x80000000;
+	uint16_t word = (uint16_t)cmd->Data;
+	gDetApi->WriteCommandWord(addr, word);
+	rsp->CmdRsp = HPT_WRITE_CFG_RSP;
+}
+
+/**
+ * @brief Handle read config
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_read_cfg_cmd(HPT_ReadCfgCmd *cmd, HPT_MsgRsp *rsp)
+{
+	uint32_t addr = cmd->Address | 0x80000000;
+	rsp->ReadCfgRsp.Data = gDetApi->ReadWord(addr);
+	rsp->CmdRsp = HPT_READ_CFG_RSP;
+	rsp->Length += sizeof(HPT_ReadCfgRsp);
+}
+
+/**
+ * @brief Handle config flash enter
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_enter_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	gDetApi->EnterCfgFlash();
+	rsp->CmdRsp = HPT_CFG_FLASH_ENTER_RSP;
+}
+
+/**
+ * @brief Handle config flash exit
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_exit_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	gDetApi->ExitCfgFlash();
+	rsp->CmdRsp = HPT_CFG_FLASH_EXIT_RSP;
+}
+
+/**
+ * @brief Handle config flash read
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_read_cmd(HPT_CfgFlashReadCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	QSPI_Flash_ReadBlock(cmd->Address, cmd->NumBytes, rsp->CfgFlashReadRsp.Data);
+	QSPI_Flash_PowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_READ_RSP;
+	rsp->Length += cmd->NumBytes * sizeof(uint8_t);
+}
+
+/**
+ * @brief Handle config flash write
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_write_cmd(HPT_CfgFlashWriteCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	uint32_t remaining = cmd->NumWords;
+	uint32_t address = cmd->BaseAddress;
+	uint8_t *data = cmd->Data;
+	while (remaining > 0) {
+		uint32_t count = remaining > 256 ? 256 : remaining;
+		QSPI_Flash_ProgramBuffer(address, data, count);
+		remaining -= count;
+		address += count;
+		data += count;
+
+		// wait for write to complete
+		uint8_t sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+		while (sr1 & 0x01) sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+	}
+	//QSPI_Flash_ProgramBuffer(cmd->BaseAddress, cmd->Data, cmd->NumWords);
+	QSPI_Flash_PowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_WRITE_RSP;
+}
+
+/**
+ * @brief Handle config flash erase
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_erase_cmd(HPT_CfgFlashEraseCmd *cmd, HPT_MsgRsp *rsp)
+{
+	QSPI_Flash_ReleasePowerDown();
+	rsp->CmdRsp = HPT_CFG_FLASH_ERASE_RSP;
+	switch (cmd->EraseType) {
+		case 0: QSPI_Flash_EraseSector(cmd->Address); break;
+		case 1: QSPI_Flash_EraseBlock32(cmd->Address); break;
+		case 2: QSPI_Flash_EraseBlock64(cmd->Address); break;
+		case 3: QSPI_Flash_EraseChip(); break;
+		default:
+			rsp->CmdRsp = HPT_FAILED_COMMAND_RSP;
+			rsp->FailureRsp.FailureCodes[g_msg_rsp.FailureRsp.Failures] = HPT_FAILURE_CODE_CMD_INVALID_PARAM;
+			rsp->FailureRsp.Failures++;
+			break;
+	}
+	QSPI_Flash_PowerDown();
+}
+
+/**
+ * @brief Handle config flash get device info
+ * 
+ * @note Runs in USB interrupt
+ * 
+ * @param cmd Command
+ * @param rsp Response
+ */
+void comms_hpt_handle_cfg_flash_dev_info_cmd(HPT_NoDataCmdRsp *cmd, HPT_MsgRsp *rsp)
+{
+	UNUSED(cmd);
+	uint8_t mf, id, jedec_type, jedec_cap;
+	uint8_t sr1, sr2, sr3;
+
+	QSPI_Flash_ReleasePowerDown();
+	QSPI_Flash_ReadMfgDevID(&mf, &id);
+	QSPI_Flash_ReadJEDECID(&mf, &jedec_type, &jedec_cap);
+	QSPI_Flash_ReadUniqueID(rsp->CfgFlashDevInfoRsp.UniqueID);
+	sr1 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_1);
+	sr2 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_2);
+	sr3 = QSPI_Flash_ReadStatusReg(QSPI_FLASH_STATUS_REG_3);
+	QSPI_Flash_PowerDown();
+
+	rsp->CfgFlashDevInfoRsp.ManufacturerID  = mf;
+	rsp->CfgFlashDevInfoRsp.DeviceID        = id;
+	rsp->CfgFlashDevInfoRsp.JEDECType       = jedec_type;
+	rsp->CfgFlashDevInfoRsp.JEDECCapacity   = jedec_cap;
+	rsp->CfgFlashDevInfoRsp.StatusRegister1 = sr1;
+	rsp->CfgFlashDevInfoRsp.StatusRegister2 = sr2;
+	rsp->CfgFlashDevInfoRsp.StatusRegister3 = sr3;
+	rsp->CfgFlashDevInfoRsp._Pad[0] = 0;
+	rsp->CmdRsp = HPT_CFG_FLASH_DEV_INFO_RSP;
+	rsp->Length += sizeof(HPT_CfgFlashDevInfoRsp);
 }
 
 /**
@@ -350,6 +526,30 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 			case HPT_READ_WORD_CMD:
 				comms_hpt_handle_read_word_cmd(&msg->ReadWordCmd, &g_msg_rsp);
 				break;
+			case HPT_WRITE_CFG_CMD:
+				comms_hpt_handle_write_cfg_cmd(&msg->WriteCfgCmd, &g_msg_rsp);
+				break;
+			case HPT_READ_CFG_CMD:
+				comms_hpt_handle_read_cfg_cmd(&msg->ReadCfgCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_ENTER_CMD:
+				comms_hpt_handle_cfg_flash_enter_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_EXIT_CMD:
+				comms_hpt_handle_cfg_flash_exit_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_READ_CMD:
+				comms_hpt_handle_cfg_flash_read_cmd(&msg->CfgFlashReadCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_WRITE_CMD:
+				comms_hpt_handle_cfg_flash_write_cmd(&msg->CfgFlashWriteCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_ERASE_CMD:
+				comms_hpt_handle_cfg_flash_erase_cmd(&msg->CfgFlashEraseCmd, &g_msg_rsp);
+				break;
+			case HPT_CFG_FLASH_DEV_INFO_CMD:
+				comms_hpt_handle_cfg_flash_dev_info_cmd(&msg->NoDataCmdRsp, &g_msg_rsp);
+				break;
 			case HPT_ANA_SET_CAL_COUNTS_CMD:
 				comms_hpt_handle_ana_set_cal_counts(&msg->AnaSetCalCountsCmd, &g_msg_rsp);
 				break;
@@ -378,7 +578,105 @@ uint32_t comms_usb_hpt_receive_msg(HPT_MsgCmd *msg)
 #undef COMMS_CHECK_DISPATCH
 }
 
+typedef enum {
+	COMMS_HPT_RX_STATE_START,
+	COMMS_HPT_RX_STATE_LENGTH_0,
+	COMMS_HPT_RX_STATE_LENGTH_1,
+	COMMS_HPT_RX_STATE_CMD,
+	COMMS_HPT_RX_STATE_PAYLOAD,
+	COMMS_HPT_RX_STATE_CRC_0,
+	COMMS_HPT_RX_STATE_CRC_1,
+	COMMS_HPT_RX_STATE_CRC_2,
+	COMMS_HPT_RX_STATE_CRC_3,
+} comms_hpt_rx_state;
+comms_hpt_rx_state g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+uint32_t g_comms_hpt_rx_count = 0; // payload index
+
 void comms_usb_hpt_receive_bytes(uint8_t *bytes, uint32_t nbytes, void **send_data, uint32_t *send_len)
+{
+	printf("rec %ld state=%d\n", nbytes, g_comms_hpt_rx_state);
+	uint32_t total_crc = 0;
+	*send_data = NULL;
+	*send_len = 0;
+	uint32_t i=0;
+	while (i < nbytes) {
+		switch (g_comms_hpt_rx_state) {
+			case COMMS_HPT_RX_STATE_START:
+				if (bytes[i] == '~') {
+					g_msg_cmd.StartChar = bytes[i];
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_LENGTH_0;
+				}
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_LENGTH_0:
+				g_msg_cmd.Length = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_LENGTH_1;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_LENGTH_1:
+				g_msg_cmd.Length |= ((uint16_t)bytes[i] << 8);
+				if (g_msg_cmd.Length > (64 + HPT_MAX_CMD_PAYLOAD)) {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+					break;
+				} else {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CMD;
+				}
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CMD:
+				g_msg_cmd.CmdRsp = bytes[i];
+				g_comms_hpt_rx_count = 0;
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_PAYLOAD;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_PAYLOAD:
+				while (i < nbytes && g_comms_hpt_rx_count < (uint32_t)(g_msg_cmd.Length - 8)) {
+					g_msg_cmd.RawData[4 + g_comms_hpt_rx_count] = bytes[i];
+					g_comms_hpt_rx_count++;
+					i++;
+				}
+				if (g_comms_hpt_rx_count == (uint32_t)(g_msg_cmd.Length - 8)) {
+					g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_0;
+				}
+				break;
+			case COMMS_HPT_RX_STATE_CRC_0:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 4] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_1;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_1:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 3] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_2;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_2:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 2] = bytes[i];
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_CRC_3;
+				i++;
+				break;
+			case COMMS_HPT_RX_STATE_CRC_3:
+				g_msg_cmd.RawData[g_msg_cmd.Length - 1] = bytes[i];
+				// validate CRC
+				total_crc = HAL_CRC_Calculate(&hcrc, (uint32_t *)&g_msg_cmd.RawData32Bit[0], g_msg_cmd.Length/4);
+				if (total_crc == 0) {
+					comms_usb_hpt_receive_msg(&g_msg_cmd);
+					// comms_usb_hpt_receive_msg fills out g_msg_rsp
+					if (g_msg_rsp.Length != 0) {
+						*send_data = &g_msg_rsp;
+						*send_len = (uint32_t)g_msg_rsp.Length;
+					}
+				}
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+				i++;
+				break;
+			default:
+				g_comms_hpt_rx_state = COMMS_HPT_RX_STATE_START;
+				break;
+		}
+	}
+}
+
+void comms_usb_hpt_receive_bytes_onepacket(uint8_t *bytes, uint32_t nbytes, void **send_data, uint32_t *send_len)
 {
 	// TODO: message split across USB packets?
 	if (nbytes > 7) {

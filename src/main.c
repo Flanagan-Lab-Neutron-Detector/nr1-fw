@@ -23,6 +23,7 @@ TIM_HandleTypeDef  htim13;
 
 volatile int gMainLoopSemaphore;
 volatile uint32_t gResetFlags;
+volatile uint32_t gSysReqReset;
 // TODO: Move this to a header?
 uint32_t g_config_save_requested;
 
@@ -214,6 +215,9 @@ int main(void)
 			if (g_config_save_requested) {
 				g_config_save_requested = 0;
 				FlashConfigSave();
+			}
+			if (gSysReqReset) {
+				NVIC_SystemReset();
 			}
 			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
 		}
