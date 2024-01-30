@@ -158,9 +158,13 @@ void comms_hpt_handle_read_data_cmd(HPT_ReadDataCmd *cmd, HPT_MsgRsp *rsp)
  */
 void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_MsgRsp *rsp)
 {
-	uint32_t isVt = cmd->VtMode;
-	uint32_t vtMv = cmd->BitReadMv;
-	uint32_t addr = cmd->WordAddress;
+	uint32_t isVt    = cmd->VtMode;
+	uint32_t vtMv    = cmd->BitReadMv;
+	uint32_t addr    = cmd->WordAddress;
+	uint32_t samples = cmd->Samples > 0 ? cmd->Samples : 1;
+
+	// initialize sample array
+	for (uint32_t b=0; b<16; b++) rsp->ReadWordRsp.BitSample[b] = 0;
 
 	if (isVt) {
 		DetEnterVtMode();
@@ -169,10 +173,14 @@ void comms_hpt_handle_read_word_cmd(HPT_ReadWordCmd *cmd, HPT_MsgRsp *rsp)
 		DetExitVtMode();
 	}
 
-	uint16_t word = gDetApi->ReadWord(addr);
+	for (uint32_t i=0; i<samples; i++) {
+		uint16_t word = gDetApi->ReadWord(addr);
+		for (uint32_t b=0; b<16; b++) {
+			rsp->ReadWordRsp.BitSample[b] += ((word >> b) & 0x1) ? 1 : 0;
+		}
+	}
 
-	rsp->ReadWordRsp.Word = word;
-	rsp->ReadWordRsp._Pad[0] = 0;
+	rsp->ReadWordRsp.Samples = samples;
 
 	/*if (isVt)
 	{

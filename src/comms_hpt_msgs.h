@@ -211,12 +211,13 @@ typedef __PACKED_STRUCT __ALIGNED(4)
 	uint32_t		VtMode;					// true = read in Vt mode, else read normally
 	uint32_t		BitReadMv;				// if VtMode, read voltage in mV
 	uint32_t		WordAddress;
+	uint32_t		Samples;				// how many samples to take
 } HPT_ReadWordCmd;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
 {
-	uint16_t		Word;
-	uint16_t		_Pad[1];
+	uint32_t 		Samples;				// how many times the word was sampled
+	uint32_t		BitSample[16];			// For each bit, how many times it read as 1
 } HPT_ReadWordRsp;
 
 typedef __PACKED_STRUCT __ALIGNED(4)
